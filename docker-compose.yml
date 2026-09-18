@@ -1,6 +1,7 @@
-# AI Provider OS — 1 comando setup fácil
+# AI Provider OS — Opção B Docker — 1 comando — SEM Rust, SEM Python, SEM Node
 # Uso: docker compose up --build
 # Frontend: http://localhost:3000 — Backend: http://localhost:8000 — Docs: http://localhost:8000/docs
+# Funciona no Windows sem Rust, sem venv, sem pip — apenas Docker Desktop
 
 services:
   backend:
@@ -13,7 +14,7 @@ services:
       - SECRET_KEY=auto-generated-dev-key-32-chars-minimum-change-prod
       - DATABASE_URL=sqlite:///./ai_provider_os.db
       - CORS_ORIGINS=*
-      # Opcional: adicione suas keys aqui ou no .env — funciona sem keys (ovhcloud free sem key)
+      # Opcional: adicione suas keys no .env na raiz ou aqui — funciona SEM keys (ovhcloud free 2 RPM)
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
@@ -24,15 +25,15 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - COHERE_API_KEY=${COHERE_API_KEY:-}
     volumes:
-      - ./backend:/app
-      - backend_data:/app/data
-      - ./backend/ai_provider_os.db:/app/ai_provider_os.db
+      # Persistência DB — não precisa arquivo local, cria volume Docker
+      - backend_db:/app/data
+      - backend_storage:/app/ai_provider_os.db
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
       timeout: 5s
-      retries: 5
-      start_period: 20s
+      retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   frontend:
@@ -49,15 +50,6 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
-  # Opcional: Redis para cache — descomente se quiser
-  # redis:
-  #   image: redis:7-alpine
-  #   ports:
-  #     - "6379:6379"
-  #   volumes:
-  #     - redis_data:/data
-  #   restart: unless-stopped
-
 volumes:
-  backend_data:
-  # redis_data:
+  backend_db:
+  backend_storage:
