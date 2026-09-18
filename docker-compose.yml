@@ -1,8 +1,7 @@
-# AI Provider OS — Opção B Docker — 1 comando — SEM Rust — FIX volume bug
+# AI Provider OS — Opção B Docker — 1 comando — SEM Rust — 100% confiança
 # Uso: docker compose up --build
-# Frontend: http://localhost:3000 — Backend: http://localhost:8000 — Docs: http://localhost:8000/docs
-# FIX CRÍTICO: antes backend_storage:/app/ai_provider_os.db montava volume (diretório) em caminho de arquivo → criava diretório não arquivo → DB falhava
-# Agora: backend_db:/app/data + DATABASE_URL sqlite:////app/data/ai_provider_os.db — volume em diretório, não arquivo
+# Frontend: http://localhost:3000 — Backend: http://localhost:8000 — Docs: /docs
+# FIX volume: usa /app/data com volume nomeado, não arquivo — evita bug diretório vs arquivo
 
 services:
   backend:
@@ -15,7 +14,6 @@ services:
       - SECRET_KEY=auto-generated-dev-key-32-chars-minimum-change-prod
       - DATABASE_URL=sqlite:////app/data/ai_provider_os.db
       - CORS_ORIGINS=*
-      # Opcional: adicione suas keys no .env na raiz — funciona SEM keys (ovhcloud free 2 RPM)
       - GROQ_API_KEY=${GROQ_API_KEY:-}
       - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
       - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
@@ -26,7 +24,6 @@ services:
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
       - COHERE_API_KEY=${COHERE_API_KEY:-}
     volumes:
-      # Persistência DB — volume em diretório /app/data, não em arquivo — FIX CRÍTICO
       - backend_db:/app/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]

@@ -64,27 +64,32 @@ async def check_provider_health(provider: Provider, timeout: float = 5.0) -> Dic
             test_urls = [u for u in test_urls if u]
             
             last_error = None
-            for url in test_urls[:2]:  # Testa 2 URLs max para ser rápido
+            for url in test_urls[:3]:  # Testa 3 URLs: /health, base_url, /v1/models — mais realismo
                 try:
                     resp = await client.get(url, headers={"User-Agent": "AI-Provider-OS-Health-Check/1.0"})
                     latency = int((time.time() - start) * 1000)
                     
-                    # 200, 401, 403, 404 são todos "reachable" — 401 means needs key but server exists
+                    # 200, 401, 403, 404, 405, 422 são todos "reachable" — server existe
                     if resp.status_code in [200, 401, 403, 404, 405, 422]:
-                        # Distingue needs_key vs ok
                         needs_key = resp.status_code in [401, 403]
                         is_ok = resp.status_code == 200
+                        is_reachable = resp.status_code in [200, 401, 403, 404, 405, 422]
                         
-                        # Rating baseado em status
+                        # Rating baseado em status — mais realista
                         if is_ok:
                             rating = 80 if provider.provider_id in FREE_REMOTE_NO_KEY else 60
                             status = "ONLINE"
                         elif needs_key:
-                            rating = 40  # Server exists but needs key
+                            rating = 40
                             status = "NEEDS_KEY"
                         else:
+                            # 404, 405, 422 ainda significa server existe — rating 30
                             rating = 30
                             status = "REACHABLE_BUT_ERROR"
+                        
+                        # FIX free_no_key_remote: se provider é conhecido free remote e reachable, marca como remote
+                        # pollinations e ovhcloud são free remote mesmo se /health retorna 404 — server existe
+                        is_free_remote = provider.provider_id in FREE_REMOTE_NO_KEY and is_reachable
                         
                         return {
                             "provider_id": provider.provider_id,
@@ -93,7 +98,7 @@ async def check_provider_health(provider: Provider, timeout: float = 5.0) -> Dic
                             "rating": rating,
                             "real_test": True,
                             "reason": f"HTTP {resp.status_code} at {url}",
-                            "free_no_key_remote": provider.provider_id in FREE_REMOTE_NO_KEY and is_ok,
+                            "free_no_key_remote": is_free_remote,
                             "free_no_key_local": False,
                             "needs_key": needs_key,
                             "local_setup_required": False,
@@ -172,28 +177,38 @@ async def health_check_all_200(db: Session, limit: int = 50, concurrency: int = 
     local = len([r for r in results if r['status'] == 'LOCAL_SETUP_REQUIRED'])
     error = len([r for r in results if r['status'] == 'ERROR'])
     
-    # Atualiza DB com resultados reais (opcional, mas para 100% confiança)
+    # Atualiza DB com resultados reais — FIX flag_modified para JSON field persistir
+    from sqlalchemy.orm.attributes import flag_modified
     for result in results:
         try:
             provider = db.query(Provider).filter(Provider.provider_id == result['provider_id']).first()
             if provider:
                 # Atualiza rating se real_test True e rating >0
                 if result['real_test'] and result['rating'] > 0:
-                    # Não sobrescreve rating alto existente, apenas se 0
                     if (provider.rating or 0) == 0:
                         provider.rating = result['rating']
                 
-                # Atualiza capabilities com free_no_key_remote vs local separação
-                caps = provider.capabilities or {}
+                # Atualiza capabilities com free_no_key_remote vs local separação — FIX flag_modified
+                caps = dict(provider.capabilities or {})
                 caps['free_no_key_remote'] = result['free_no_key_remote']
                 caps['free_no_key_local'] = result['free_no_key_local']
                 caps['health_check_real'] = result['real_test']
                 caps['health_check_status'] = result['status']
                 caps['health_check_reason'] = result['reason']
                 caps['health_check_latency_ms'] = result['latency_ms']
+                caps['health_check_http_status'] = result.get('http_status')
                 if result['status'] == 'LOCAL_SETUP_REQUIRED':
                     caps['local_setup_required'] = True
+                # Separa free_no_key: remote vs local para 100% confiança
+                if result['free_no_key_remote']:
+                    caps['free_no_key'] = True
+                    caps['free_no_key_type'] = 'remote'
+                elif result['free_no_key_local']:
+                    caps['free_no_key'] = True
+                    caps['free_no_key_type'] = 'local'
+                
                 provider.capabilities = caps
+                flag_modified(provider, "capabilities")
                 
                 # Atualiza last_health_check
                 from datetime import datetime, timezone
