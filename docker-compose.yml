@@ -1,0 +1,63 @@
+# AI Provider OS — 1 comando setup fácil
+# Uso: docker compose up --build
+# Frontend: http://localhost:3000 — Backend: http://localhost:8000 — Docs: http://localhost:8000/docs
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - SECRET_KEY=auto-generated-dev-key-32-chars-minimum-change-prod
+      - DATABASE_URL=sqlite:///./ai_provider_os.db
+      - CORS_ORIGINS=*
+      # Opcional: adicione suas keys aqui ou no .env — funciona sem keys (ovhcloud free sem key)
+      - GROQ_API_KEY=${GROQ_API_KEY:-}
+      - CEREBRAS_API_KEY=${CEREBRAS_API_KEY:-}
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - HF_TOKEN=${HF_TOKEN:-}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - COHERE_API_KEY=${COHERE_API_KEY:-}
+    volumes:
+      - ./backend:/app
+      - backend_data:/app/data
+      - ./backend/ai_provider_os.db:/app/ai_provider_os.db
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+      - NODE_ENV=production
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Opcional: Redis para cache — descomente se quiser
+  # redis:
+  #   image: redis:7-alpine
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   restart: unless-stopped
+
+volumes:
+  backend_data:
+  # redis_data:
