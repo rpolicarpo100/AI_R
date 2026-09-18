@@ -128,6 +128,14 @@ CHAT_COMMANDS = {
         "usage": "/ajuda - lista comandos",
         "critical": "Você no centro, você decide, comandos empoderam agentes, terceiro olho aberto",
         "example": "/ajuda"
+    },
+    "brainstorm": {
+        "name": "brainstorm",
+        "description": "Brainstorming antes de construir ou responder — 3-5 ideias, abordagens, MVP vs full, mais perto do objetivo final",
+        "agents": ["brainstormer-01", "intent-analyzer-01", "prompt-optimizer-01", "critic-01", "frontend-builder-01", "backend-builder-01"],
+        "usage": "/brainstorm <ideia ou objetivo> — ex: /brainstorm cria app gestão despesas",
+        "critical": "Não fica na 1ª tentativa, brainstorm 3-5 interpretações/abordagens, pros/cons, MVP vs full, template mais próximo, pergunta clarificação, você no centro, terceiro olho aberto — REAL",
+        "example": "/brainstorm cria landing page moderna com 200 providers"
     }
 }
 
@@ -465,6 +473,74 @@ def execute_command(req: CommandRequest, db: Session = Depends(get_db)):
             "real": True
         }
         next_steps = ["/audita para auditoria completa", "/rigor para ver rigor segurança"]
+    
+    elif cmd_name == "brainstorm":
+        # Brainstorming antes de construir ou responder — mais perto do objetivo final
+        try:
+            from ..services.brainstorming_service import brainstorming_service
+            prompt_to_brainstorm = req.args or req.context or "Objetivo final não especificado — brainstorm geral"
+            
+            # Se tem project_id, é brainstorm antes de construir
+            if req.project_id or any(word in prompt_to_brainstorm.lower() for word in ["app", "site", "cria", "build", "landing", "dashboard", "ecommerce", "blog", "chat", "portfolio", "api"]):
+                brainstorm_result = brainstorming_service.brainstorm_before_build(
+                    user_prompt=prompt_to_brainstorm,
+                    available_templates=None
+                )
+                result = {
+                    "action": "brainstorm antes de construir",
+                    "target": prompt_to_brainstorm,
+                    "brainstorm": brainstorm_result,
+                    "best_approach": brainstorm_result["best_approach"],
+                    "suggested_templates": brainstorm_result["suggested_templates"],
+                    "approaches": brainstorm_result["approaches"],
+                    "mvp_vs_full": brainstorm_result["mvp_vs_full"],
+                    "agents_analysis": {
+                        "brainstormer-01": f"Brainstorm 3-5 abordagens para '{prompt_to_brainstorm}' — best {brainstorm_result['best_approach']['name']} {brainstorm_result['best_approach']['closest_to_final']}% perto do objetivo final",
+                        "intent-analyzer-01": f"Analisa intenção profunda de '{prompt_to_brainstorm}' — objetivo final mais perto",
+                        "frontend-builder-01": f"Sugere template {brainstorm_result['best_approach']['template']} para construir",
+                        "backend-builder-01": f"Backend com 200 providers gateway se precisar AI",
+                        "critic-01": "Contesta 1ª tentativa, terceiro olho aberto, não fica na 1ª ideia"
+                    },
+                    "critical": f"Brainstorming REAL antes de construir — {len(brainstorm_result['approaches'])} abordagens, best {brainstorm_result['best_approach']['name']} {brainstorm_result['best_approach']['closest_to_final']}% perto do objetivo final — você no centro, você escolhe",
+                    "real": True,
+                    "version": "Brainstorming antes de construir — mais perto do objetivo final"
+                }
+                next_steps = [f"Criar projeto com template {brainstorm_result['best_approach']['template']}", "/testa para testar após construir", "/audita para auditar"]
+            else:
+                # Brainstorm antes de responder
+                brainstorm_result = brainstorming_service.brainstorm_before_respond(
+                    user_prompt=prompt_to_brainstorm,
+                    chat_history=[],
+                    profile="BEST"
+                )
+                result = {
+                    "action": "brainstorm antes de responder",
+                    "target": prompt_to_brainstorm,
+                    "brainstorm": brainstorm_result,
+                    "best_interpretation": brainstorm_result["best_interpretation"],
+                    "interpretations": brainstorm_result["interpretations"],
+                    "ambiguities": brainstorm_result["ambiguities"],
+                    "agents_analysis": {
+                        "brainstormer-01": f"Brainstorm {len(brainstorm_result['interpretations'])} interpretações para '{prompt_to_brainstorm}' — best {brainstorm_result['best_interpretation']['type']} {brainstorm_result['best_interpretation']['closest_to_final']}% perto do objetivo final",
+                        "intent-analyzer-01": "Analisa intenção profunda, detecta ambiguidade",
+                        "prompt-optimizer-01": "Otimiza prompt com contexto, requisitos, edge cases",
+                        "critic-01": "Contesta 1ª tentativa, terceiro olho aberto"
+                    },
+                    "critical": f"Brainstorming REAL antes de responder — {len(brainstorm_result['interpretations'])} interpretações, best {brainstorm_result['best_interpretation']['type']} {brainstorm_result['best_interpretation']['closest_to_final']}% perto do objetivo final — não fica na 1ª tentativa",
+                    "real": True,
+                    "version": "Brainstorming antes de responder — mais perto do objetivo final"
+                }
+                next_steps = ["/contesta para contestar brainstorm", "Responder com best_interpretation", "/brainstorm com mais contexto se ambíguo"]
+        except Exception as e:
+            import traceback
+            result = {
+                "action": "brainstorm",
+                "error": str(e),
+                "traceback": traceback.format_exc()[:500],
+                "fallback": "Brainstorm service failed — usando intent-analyzer + prompt-optimizer como fallback",
+                "real": False
+            }
+            next_steps = ["/agentes para ver agentes", "/ajuda"]
     
     else:
         result = {

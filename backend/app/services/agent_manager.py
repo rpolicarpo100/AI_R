@@ -256,6 +256,16 @@ BASE_SKILLS = [
         "outputs": ["cost_report", "budget_status"],
         "security_level": "LOW",
     },
+    {
+        "skill_id": "brainstorming",
+        "name": "Brainstorming",
+        "description": "Brainstorming antes de construir ou responder — 3-5 interpretações, abordagens, MVP vs full, mais perto do objetivo final, não fica na 1ª tentativa, terceiro olho aberto",
+        "category": "app_construction",
+        "capabilities": ["brainstorm", "ideation", "mvp_definition", "template_matching", "objective_clarification"],
+        "inputs": ["user_prompt", "chat_history", "available_templates"],
+        "outputs": ["interpretations", "approaches", "best_approach", "mvp", "questions"],
+        "security_level": "LOW",
+    },
 ]
 
 # Agentes base - cada um com role, skills, competencies iniciais medidas
@@ -481,6 +491,17 @@ BASE_AGENTS = [
         "tools": ["cost_calc", "budget_alert", "usage_tracking", "report"],
         "permissions": ["read", "audit", "report"],
         "rating": 86.0,
+    },
+    {
+        "agent_id": "brainstormer-01",
+        "name": "Brainstormer Agent",
+        "role": AgentRole.PLANNER,
+        "description": "Brainstorming antes de construir ou responder — 3-5 ideias, abordagens, MVP vs full, mais perto do objetivo final, você no centro, terceiro olho aberto, contesta, critica",
+        "skills": ["brainstorming", "intent_analysis", "prompt_engineering", "frontend_build", "backend_build"],
+        "competencies": {"brainstorming": 95, "intent": 90, "planning": 90, "mvp": 85, "templates": 85, "third_eye": 90},
+        "tools": ["brainstorm", "ideation", "intent_detection", "template_matching", "mvp_definition"],
+        "permissions": ["read", "plan", "brainstorm", "analyze"],
+        "rating": 92.0,
     },
 ]
 

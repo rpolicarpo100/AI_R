@@ -349,9 +349,11 @@ app.include_router(multi_agent_router.router, prefix=settings.API_PREFIX)  # /ap
 app.include_router(observability_router.router, prefix=settings.API_PREFIX)  # /api/observability - Observability Enterprise P16 tracing sessions cost cache logs alerts guardrails 18+
 app.include_router(p17_lean_router.router)  # /api/p17 - P17 Lean Provider Ranker + Prompt Engineer + Critic Heuristics + Fallback + Cache + Rigor
 from .routers import rigor as rigor_router
-app.include_router(rigor_router.router)  # /api/rigor - P7 Rigor Poderoso Contínuo e Fluido
+app.include_router(rigor_router.router)  # /api/rigor - P7 Rigor Poderoso + P16 honesty + P21 health-check-200 + 100% confiança com realismo
 from .routers import context as context_router
 app.include_router(context_router.router)  # /api/context - P8 Context Compiler P0+P1+P2
+from .routers import brainstorm as brainstorm_router
+app.include_router(brainstorm_router.router, prefix=settings.API_PREFIX)  # /api/brainstorm - Brainstorming antes de construir/responder — mais perto do objetivo final
 
 @app.get("/")
 @limiter.limit("100/minute")
