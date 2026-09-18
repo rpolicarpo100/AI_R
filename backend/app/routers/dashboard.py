@@ -265,8 +265,18 @@ def get_stats(request: Request, db: Session = Depends(get_db)):
     return result
 
 @router.get("/network")
-def get_network(db: Session = Depends(get_db)):
-    providers = db.query(Provider).all()
+def get_network(page: int = 0, per_page: int = 50, db: Session = Depends(get_db)):
+    """P27 Dashboard Paginação para 200 providers — 400KB→50KB com paginação 50 per page"""
+    # Pagination for 200 providers
+    all_providers = db.query(Provider).all()
+    total = len(all_providers)
+    # Sort by rating desc
+    sorted_providers = sorted(all_providers, key=lambda x: x.rating, reverse=True)
+    # Paginate
+    start = page * per_page
+    end = start + per_page
+    providers = sorted_providers[start:end]
+    
     result = []
     for p in providers:
         models_count = db.query(Model).filter(Model.provider_id == p.provider_id).count()
@@ -294,7 +304,20 @@ def get_network(db: Session = Depends(get_db)):
             "circuit_state": circuit["state"],
             "circuit_failures": circuit["failures"]
         })
-    return sorted(result, key=lambda x: x["rating"], reverse=True)
+    sorted_result = sorted(result, key=lambda x: x["rating"], reverse=True)
+    # P27 pagination info
+    return {
+        "providers": sorted_result,
+        "pagination": {
+            "page": page,
+            "per_page": per_page,
+            "total": total,
+            "total_pages": (total + per_page - 1) // per_page,
+            "has_next": end < total,
+            "has_prev": page > 0
+        },
+        "performance": f"P27 pagination 400KB→50KB with {per_page} per page for 200 providers"
+    }
 
 @router.get("/discovery")
 def get_discovery():

@@ -97,12 +97,12 @@ PROJECT_MAX_RESPONSE = _env_int("PROJECT_MAX_RESPONSE", 50000)
 PROJECT_MAX_TOTAL_FILE_SIZE = _env_int("PROJECT_MAX_TOTAL_FILE_SIZE", 100000)
 
 # ===== CACHE =====
-CACHE_L1_TTL = _env_int("CACHE_L1_TTL", 30)
-CACHE_L1_MAX = _env_int("CACHE_L1_MAX", 100)
+CACHE_L1_TTL = _env_int("CACHE_L1_TTL", 60)  # P26 200 providers — 30→60 for 200 providers
+CACHE_L1_MAX = _env_int("CACHE_L1_MAX", 200)  # P26 200 providers — 100→200 for 200 providers
 CACHE_L2_TTL_SIMPLE = _env_int("CACHE_L2_TTL_SIMPLE", 3600)
 CACHE_L2_TTL_MEDIUM = _env_int("CACHE_L2_TTL_MEDIUM", 1800)
 CACHE_L2_TTL_COMPLEX = _env_int("CACHE_L2_TTL_COMPLEX", 600)
-PROVIDER_CACHE_TTL = _env_int("PROVIDER_CACHE_TTL", 60)
+PROVIDER_CACHE_TTL = _env_int("PROVIDER_CACHE_TTL", 120)  # P26 200 providers — 60→120 for 200 providers
 
 # ===== HTTP POOL =====
 HTTP_POOL_KEEPALIVE = _env_int("HTTP_POOL_KEEPALIVE", 50)  # P24 200 providers — 20→50 for 200 providers
@@ -116,8 +116,8 @@ REQUEST_TIMEOUT = _env_int("REQUEST_TIMEOUT", 60)
 REQUEST_TIMEOUT_CAP = _env_int("REQUEST_TIMEOUT_CAP", 120)
 
 # ===== DB POOL =====
-DB_POOL_SIZE = _env_int("DB_POOL_SIZE", 10)
-DB_MAX_OVERFLOW = _env_int("DB_MAX_OVERFLOW", 20)
+DB_POOL_SIZE = _env_int("DB_POOL_SIZE", 20)  # P30 200 providers — 10→20 for 200 providers
+DB_MAX_OVERFLOW = _env_int("DB_MAX_OVERFLOW", 40)  # P30 200 providers — 20→40 for 200 providers
 DB_POOL_TIMEOUT = _env_int("DB_POOL_TIMEOUT", 30)
 DB_POOL_RECYCLE = _env_int("DB_POOL_RECYCLE", 3600)
 DB_CACHE_SIZE_MB = _env_int("DB_CACHE_SIZE_MB", 64)
