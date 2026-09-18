@@ -1,179 +1,187 @@
-# 🐳 Opção B Docker — 1 Comando — SEM Rust, SEM Python, SEM Node
+# 🐳 Opção B Docker — 1 Comando — SEM Rust, SEM Python
 
-**Escolheste Opção B — a mais fácil no Windows!** Não precisa Python, Rust, venv, pip — apenas Docker Desktop.
+**Docker instalado (v29.7.2) mas daemon não rodando — erro que tiveste:**
 
-## ✅ Pré-requisitos
+```
+failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
+O sistema não conseguiu localizar o ficheiro especificado.
+```
 
-1. **Docker Desktop** instalado e rodando:
-   - Download: https://www.docker.com/products/docker-desktop/
-   - Instala, reinicia PC, abre Docker Desktop, espera ficar verde "Running"
-   - Testa: abre CMD e digita `docker --version` → deve mostrar versão
+**Isso significa:** Docker CLI instalado, mas Docker Desktop (engine) não está rodando. Precisa abrir Docker Desktop e esperar ficar VERDE.
 
-## 🚀 Setup — 1 Comando
+---
 
-### Windows — Duplo clique ou CMD:
+## 🔧 FIX RÁPIDO — Faz AGORA (2 min)
 
-**Opção B1 — Script automático (recomendado):**
+### Passo 1 — Abrir Docker Desktop manualmente
+
+1. **Abre menu Iniciar → procura "Docker Desktop" → clica para abrir**
+2. **Espera 30-60s** — primeira vez demora
+3. **Olha canto inferior esquerdo** — deve ficar **VERDE "Engine running" / "Running"**
+4. Se ficar vermelho ou não abre, vai para Passo 2
+
+### Passo 2 — Fix WSL (se Passo 1 falhar)
+
+Abre **PowerShell como ADMIN** (botão direito no PowerShell → Run as administrator) e faz:
+
+```powershell
+wsl --update
+wsl --shutdown
+```
+
+Depois **abre Docker Desktop novamente** e espera ficar VERDE.
+
+Ou executa o script fix que criei:
+
+```cmd
+cd AI_R
+docker-fix-windows.bat
+```
+- Roda como ADMIN se possível (botão direito → Run as administrator)
+- Faz wsl --update + wsl --shutdown + abre Docker Desktop + espera 30s
+
+### Passo 3 — Testar se daemon agora roda
+
+No CMD:
+
+```cmd
+docker ps
+```
+
+- Se mostrar lista (mesmo vazia) → **OK, daemon rodando**
+- Se ainda der erro `failed to connect` → repete Passo 1-2, reinicia PC
+
+### Passo 4 — Start AI Provider OS
+
+Depois de `docker ps` funcionar:
+
 ```cmd
 cd AI_R
 docker-start.bat
 ```
-- Faz git pull, build, start, abre browser http://localhost:3000
 
-**Opção B2 — Comando manual:**
+Ou:
+
 ```cmd
-cd AI_R
 docker compose up --build
 ```
-- Primeira vez demora 2-5 min (baixa python:3.11-slim + node:20-alpine + pip install)
-- Depois fica rápido (cache)
 
-**Opção B3 — Com logs visíveis:**
-```cmd
-cd AI_R
-docker compose up --build
-```
-- Vê logs backend + frontend ao vivo
-- Ctrl+C para parar
+- Primeira vez 2-5 min (baixa python:3.11-slim + node:20-alpine)
+- Depois rápido (cache)
 
-## 🌐 Acessar
+---
 
-Depois de `docker compose up --build`:
+## 🌐 Acessar (depois de docker compose up)
 
-- **Frontend:** http://localhost:3000 — CHAT AI | Settings — 13 templates
+- **Frontend:** http://localhost:3000 — CHAT AI | Settings
 - **Backend:** http://localhost:8000
-- **Docs Swagger:** http://localhost:8000/docs
-- **Health:** http://localhost:8000/health → `{"status":"healthy","providers":200,...}`
-- **Rigor:** http://localhost:8000/api/benchmark/rigor
-- **Stats:** http://localhost:8000/api/dashboard/stats
+- **Docs:** http://localhost:8000/docs
+- **Health:** http://localhost:8000/health → `{"status":"healthy","providers":200}`
 
-**Sem keys funciona!** ovhcloud 100% free sem key (2 RPM 500M/5M por dia) + 13 templates:
-- landing-page, dashboard-saas, ecommerce, blog-md, chat-app, portfolio, api-gateway + 6
+---
 
-## 🔑 Com Keys — 200 Providers
+## 🆘 Troubleshooting Completo Windows
 
-Para usar 200 providers, cria `.env` na raiz `AI_R/.env`:
+### Erro que tiveste:
+
 ```
-GROQ_API_KEY=gsk_...
-CEREBRAS_API_KEY=csk_...
-MISTRAL_API_KEY=...
-OPENROUTER_API_KEY=sk-or-...
-HF_TOKEN=hf_...
-GEMINI_API_KEY=...
-NVIDIA_API_KEY=nvapi-...
+failed to connect to the docker API at npipe:////./pipe/dockerDesktopLinuxEngine
+O sistema não conseguiu localizar o ficheiro especificado.
 ```
 
-Depois:
-```cmd
-docker compose down
-docker compose up --build
-```
+**Causa:** Docker Desktop não está aberto/rodando. Docker CLI (`docker --version`) funciona, mas engine não.
 
-Docker lê `.env` automaticamente via `${GROQ_API_KEY:-}` no docker-compose.yml
+**Fix:**
 
-## 🛠️ Comandos Úteis
+1. **Abre Docker Desktop manualmente** — não basta ter instalado, precisa estar rodando
+2. **Espera ficar VERDE Running** — canto inferior esquerdo
+3. **Se não ficar verde:**
+   - PowerShell ADMIN:
+     ```powershell
+     wsl --update
+     wsl --shutdown
+     ```
+   - Abre Docker Desktop novamente
+   - Se ainda falhar, reinicia PC
 
-```cmd
-# Ver logs
-docker compose logs -f
-docker compose logs -f backend
-docker compose logs -f frontend
+4. **Verifica:**
+   ```cmd
+   docker ps
+   ```
+   Deve funcionar (lista vazia OK). Se funcionar, faz `docker-start.bat`
 
-# Ver containers rodando
-docker ps
+### Outros erros:
 
-# Parar tudo
-docker compose down
-
-# Reset total (apaga DB e rebuild)
-docker compose down -v
-docker compose up --build
-
-# Health check
-curl http://localhost:8000/health
-# ou no browser: http://localhost:8000/health
-
-# Testar chat sem key (ovhcloud free)
-curl http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" -d "{\"model\":\"llama-3.3-70b-versatile\",\"messages\":[{\"role\":\"user\",\"content\":\"Hi in 3 words\"}],\"max_tokens\":10}"
-```
-
-## 🆘 Troubleshooting Windows
-
-**1. Docker não encontrado:**
+**Docker não encontrado:**
 ```
 docker: command not found
 ```
 - Instala Docker Desktop https://www.docker.com/products/docker-desktop/
 - Reinicia PC
-- Abre Docker Desktop e espera "Running"
 
-**2. Porta 8000 ou 3000 ocupada:**
+**Porta 8000/3000 ocupada:**
 ```cmd
-# Parar containers antigos
 docker compose down
-# Ver quem usa porta
 netstat -ano | findstr :8000
 netstat -ano | findstr :3000
-# Mata processo ou muda porta no docker-compose.yml
 ```
 
-**3. Build falha no Windows:**
+**Build falha:**
 ```cmd
-# Limpa cache Docker
 docker system prune -a
 docker compose up --build --no-cache
 ```
 
-**4. Frontend não abre:**
-- Aguarda 30s — backend tem healthcheck 30s start_period
-- Vê logs: `docker compose logs -f backend`
-- Testa backend primeiro: http://localhost:8000/health deve dar 200 OK
-- Depois frontend: http://localhost:3000
+**Frontend não abre:**
+- Aguarda 30s — backend healthcheck 30s
+- `docker compose logs -f backend`
+- Testa http://localhost:8000/health primeiro
 
-**5. WSL2 no Windows:**
-- Docker Desktop usa WSL2 — se der erro WSL, abre PowerShell admin:
+**WSL2 erro:**
 ```powershell
 wsl --update
 wsl --shutdown
 ```
-- Abre Docker Desktop novamente
-
-## 📊 O que Docker faz (sem Rust!)
-
-- **Backend Dockerfile:** `FROM python:3.11-slim`
-  - Python 3.11 tem wheels binários para `pydantic-core` (não precisa Rust/maturin)
-  - `pip install -r requirements.txt` com versões flexíveis `>=` encontra wheels
-  - Evita erro `Failed building wheel for pydantic-core` que tiveste no Windows Python 3.13
-
-- **Frontend Dockerfile:** `FROM node:20-alpine`
-  - Build Next.js 16.3.5 Turbopack
-  - 0 vulns, 1.0s build
-
-- **docker-compose.yml:** 2 serviços + 2 volumes
-  - backend:8000 + frontend:3000
-  - Volumes `backend_db` + `backend_storage` persistem DB
-  - Healthcheck curl backend, frontend depende de backend healthy
-
-## ✅ Vantagens Opção B Docker
-
-| Opção A Local | Opção B Docker ⭐ |
-|---------------|-------------------|
-| Precisa Python 3.11/3.12, Node, Rust opcional | Apenas Docker Desktop |
-| venv, pip install, npm install manual | 1 comando `docker compose up --build` |
-| Erro pydantic-core sem Rust no Windows 3.13 | Sem Rust — python:3.11-slim tem wheels |
-| Portas podem conflitar | Isolado em containers |
-| Precisa .env manual | Lê .env automático |
-
-**Opção B é a mais fácil no Windows!** 🎉
-
-## 🎯 Próximos Passos
-
-1. `docker-start.bat` ou `docker compose up --build`
-2. Abre http://localhost:3000 — CHAT AI | Settings
-3. Testa: digita "Cria uma landing page moderna" no CHAT AI
-4. Vê 13 templates em Workplace
-5. Adiciona keys no `.env` para 200 providers se quiseres
+Abre Docker Desktop novamente.
 
 ---
 
-**Pronto! 1 comando Docker — sem Rust — 200 providers — 13 templates**
+## 📊 Porquê Docker resolve teu erro pydantic-core
+
+- Teu erro anterior: `Failed building wheel for pydantic-core` + precisa Rust no Windows Python 3.13
+- **Docker usa `python:3.11-slim`** — tem wheels binários prontos, sem Rust
+- `requirements.txt` flexível `>=` encontra wheels
+- Sem venv, sem pip, sem Rust
+
+---
+
+## 🎯 Resumo — O que fazer AGORA
+
+```cmd
+# 1. Abre Docker Desktop manualmente (menu Iniciar)
+# Espera ficar VERDE Running (30-60s)
+
+# 2. Testa se daemon roda
+docker ps
+
+# 3. Se docker ps falhar, fix WSL
+docker-fix-windows.bat
+# Ou PowerShell ADMIN:
+# wsl --update
+# wsl --shutdown
+# Abre Docker Desktop novamente
+
+# 4. Quando docker ps funcionar
+cd AI_R
+docker-start.bat
+# Ou
+docker compose up --build
+
+# 5. Abre
+# http://localhost:3000
+# http://localhost:8000/docs
+```
+
+---
+
+**Faz Passo 1 agora: abre Docker Desktop e espera ficar VERDE, depois `docker ps` deve funcionar** 🐳
