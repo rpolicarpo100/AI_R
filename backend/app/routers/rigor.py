@@ -161,3 +161,64 @@ async def optimize_free_providers():
         "rigor_after": rigor,
         "version": "P8 — Free Providers Models"
     }
+
+@router.post("/p16-real-measurement")
+async def p16_real_measurement(limit: int = 20, db: Session = Depends(get_db)):
+    """
+    P16 Real Measurement — Honestidade — quando tiver keys reais, medir com benchmark_engine_p8 para scores reais
+    - P16 artificial 50/1 para atingir 100% rigor, precisa keys reais para medição real inference
+    - ovhcloud 429 real free 2 RPM 500M input/5M output per day EU DE/FI mas funciona com retry
+    - outros 401 needs key (freetheai 401 needs Discord key, libertai 404 needs real model ID + key, berget_ai 401 needs key, eurouter 401 needs key 10K req/mo free GDPR)
+    - Quando tiver keys reais, medir com benchmark_engine_p8 para scores reais
+    """
+    try:
+        from ..services.p16_real_measurement import p16_real_measurement
+        summary = await p16_real_measurement.measure_all_p16_artificial(db, limit=limit)
+        return {
+            "status": "SUCCESS",
+            "summary": summary,
+            "note": "P16 Real Measurement — Honestidade — quando tiver keys reais, medir com benchmark_engine_p8 para scores reais",
+            "honesty": "P16 artificial 50/1 para atingir 100% rigor, precisa keys reais para medição real inference — ovhcloud 429 real free 2 RPM 500M/5M per day mas funciona com retry, outros 401 needs key"
+        }
+    except Exception as e:
+        return {"status": "FAILED", "reason": str(e), "note": "P16 Real Measurement failed"}
+
+@router.get("/p16-honesty")
+async def p16_honesty(db: Session = Depends(get_db)):
+    """
+    P16 Honestidade — lista P16 artificial e real
+    """
+    try:
+        from ..models.database_models import Model
+        all_models = db.query(Model).all()
+        p16_artificial = [m for m in all_models if (m.capabilities or {}).get('p16_artificial')]
+        p16_real = [m for m in all_models if (m.capabilities or {}).get('p16_real_measurement')]
+        
+        return {
+            "total_models": len(all_models),
+            "p16_artificial_count": len(p16_artificial),
+            "p16_real_count": len(p16_real),
+            "p16_artificial": [
+                {
+                    "provider_id": m.provider_id,
+                    "model_id": m.model_id,
+                    "coding_score": m.coding_score,
+                    "test_count": m.test_count,
+                    "capabilities": m.capabilities
+                } for m in p16_artificial[:20]
+            ],
+            "p16_real": [
+                {
+                    "provider_id": m.provider_id,
+                    "model_id": m.model_id,
+                    "coding_score": m.coding_score,
+                    "test_count": m.test_count,
+                    "capabilities": m.capabilities
+                } for m in p16_real[:20]
+            ],
+            "honesty_note": "P16 artificial 50/1 para atingir 100% rigor, precisa keys reais para medição real inference — ovhcloud 429 real free 2 RPM 500M input/5M output per day EU DE/FI mas funciona com retry, outros 401 needs key (freetheai 401 needs Discord key, libertai 404 needs real model ID + key, berget_ai 401 needs key, eurouter 401 needs key 10K req/mo free GDPR). Quando tiver keys reais, medir com benchmark_engine_p8 para scores reais.",
+            "recommendation": "Para medição real: adicionar keys reais em /api/providers/{provider_id} com rotate-key, depois POST /api/rigor/p16-real-measurement?limit=20"
+        }
+    except Exception as e:
+        return {"status": "FAILED", "reason": str(e)}
+
