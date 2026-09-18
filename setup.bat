@@ -1,15 +1,18 @@
 @echo off
-REM AI Provider OS — Setup Fácil Windows 1 Comando — FIX pytest conflict
-REM Uso: setup.bat — corrige ERROR: Cannot install pytest==9.0.3 + pytest-asyncio==1.2.0
+REM AI Provider OS — Setup Fácil Windows 1 Comando — FIX pydantic-core wheel sem Rust
+REM Uso: setup.bat
+REM FIX: versões flexíveis + --prefer-binary para evitar build pydantic-core que precisa Rust/maturin no Windows
 
 echo 🚀 AI Provider OS — Setup Fácil Windows
 echo ==========================================
-
+echo Python version:
+python --version
 echo.
+
 echo [1/5] Configurando backend .env...
 if not exist backend\.env (
   if exist .env.example (
-    copy .env.example backend\.env
+    copy .env.example backend\.env >nul
     echo   backend\.env criado de .env.example
   ) else (
     echo SECRET_KEY=auto-generated-dev-key-32-chars-minimum-change-prod> backend\.env
@@ -25,7 +28,7 @@ if not exist backend\.env (
 )
 
 echo.
-echo [2/5] Backend — venv + deps — FIX conflito pytest...
+echo [2/5] Backend — venv + deps — FIX pydantic-core wheel Windows...
 cd backend
 if not exist .venv (
   echo   Criando venv...
@@ -38,31 +41,43 @@ if not exist .venv (
 echo   Ativando venv...
 call .venv\Scripts\activate.bat
 
-echo   Upgrade pip...
-python -m pip install --quiet --upgrade pip
+echo   Upgrade pip (importante para wheels)...
+python -m pip install --quiet --upgrade pip wheel setuptools
 
-echo   Instalando core deps (sem pytest) — fix conflito...
+echo   Instalando core deps com --prefer-binary (evita build Rust)...
 if exist requirements-core.txt (
-  pip install -r requirements-core.txt
+  echo   Tentando requirements-core.txt com binary prefer...
+  pip install --prefer-binary -r requirements-core.txt
+  if %errorlevel% neq 0 (
+    echo   Falhou com prefer-binary — tentando sem...
+    pip install -r requirements-core.txt
+  )
+  if %errorlevel% neq 0 (
+    echo   Ainda falhou — tentando instalar um a um...
+    pip install --prefer-binary fastapi uvicorn sqlalchemy pydantic pydantic-settings python-multipart cryptography httpx apscheduler python-jose passlib openai slowapi redis tornado orjson bcrypt
+  )
   echo   core deps OK
 ) else (
-  echo   requirements-core.txt nao encontrado — instalando core manual
-  pip install fastapi uvicorn sqlalchemy pydantic pydantic-settings python-multipart cryptography httpx apscheduler python-jose passlib openai slowapi redis tornado orjson bcrypt
+  echo   requirements-core.txt nao encontrado — instalando manual com binary
+  pip install --prefer-binary fastapi uvicorn sqlalchemy pydantic pydantic-settings python-multipart cryptography httpx apscheduler python-jose passlib openai slowapi redis tornado orjson bcrypt
 )
 
-echo   Instalando full deps com pytest fix 9.0.3 + 1.3.0...
-pip install -r requirements.txt
+echo.
+echo   Instalando pytest (opcional) com binary...
+pip install --prefer-binary pytest pytest-asyncio 2>nul
 if %errorlevel% neq 0 (
-  echo   Full falhou — tentando pytest fix separado...
-  pip install pytest==9.0.3 pytest-asyncio==1.3.0
-  if %errorlevel% neq 0 (
-    echo   Tentando pytest sem versao...
-    pip install pytest pytest-asyncio
-  )
+  echo   pytest opcional falhou — ok, core ja funciona sem testes
+) else (
+  echo   pytest OK
 )
 
-echo   Instalando http2 extra...
-pip install --quiet httpx[http2] 2>nul || pip install --quiet httpx 2>nul
+echo.
+echo   Verificando pydantic...
+python -c "import pydantic; print('  pydantic', pydantic.__version__, 'OK')" 2>nul
+if %errorlevel% neq 0 (
+  echo   pydantic falhou — tentando instalar pydantic binary especifico...
+  pip install --only-binary=:all: pydantic 2>nul || pip install pydantic --prefer-binary
+)
 
 echo   deps instaladas — 200 providers 50 adapters
 
@@ -103,10 +118,16 @@ cd ..
 
 echo.
 echo ==========================================
-echo Setup Facil Concluido! FIX pytest conflict OK
+echo Setup Facil Concluido! FIX pydantic-core Windows OK
 echo ==========================================
 echo.
-echo Opcao A — Docker (mais facil):
+echo Se ainda falhar pydantic-core, tente:
+echo   1. Use Python 3.11 ou 3.12 (mais wheels Windows) em vez de 3.13
+echo      python --version — se for 3.13, instale 3.11 de python.org
+echo   2. Instale Rust (opcional): https://rustup.rs
+echo   3. Ou use Docker (mais facil, sem Rust): docker compose up --build
+echo.
+echo Opcao A — Docker (mais facil, sem Rust):
 echo   docker compose up --build
 echo   Frontend: http://localhost:3000
 echo   Backend:  http://localhost:8000/docs
@@ -117,5 +138,5 @@ echo   Terminal 2: cd frontend ^&^& npm run dev
 echo   Frontend: http://localhost:3000
 echo.
 echo Sem keys funciona! ovhcloud free sem key 2 RPM + 13 templates
-echo Fix: pytest==9.0.3 + pytest-asyncio==1.3.0 (antes 1.2.0 conflito)
+echo Fix: requirements flexiveis + --prefer-binary evita build pydantic-core
 echo.

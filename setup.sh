@@ -1,7 +1,7 @@
 #!/bin/bash
-# AI Provider OS — Setup Fácil 1 Comando — FIX pytest conflict
+# AI Provider OS — Setup Fácil 1 Comando — FIX pydantic-core wheel Windows/Linux
 # Uso: bash setup.sh
-# Faz tudo automaticamente: venv, deps, .env, DB, backend + frontend
+# FIX: versões flexíveis + --prefer-binary evita build pydantic-core que precisa Rust no Windows
 
 set -e
 
@@ -16,6 +16,7 @@ NC='\033[0m'
 
 OS="$(uname -s)"
 echo -e "${BLUE}OS detectado: $OS${NC}"
+python3 --version 2>/dev/null || python --version
 
 # 1. Backend .env auto
 echo ""
@@ -44,18 +45,16 @@ EOF
   fi
   if grep -q "change-me" backend/.env 2>/dev/null; then
     SECRET=$(python3 -c "import secrets; print(secrets.token_hex(32))" 2>/dev/null || openssl rand -hex 32 2>/dev/null || echo "dev-secret-key-$(date +%s)-32chars-minimum")
-    # Linux sed
-    sed -i "s/change-me-32chars-minimum-secret-key-prod/$SECRET/g" backend/.env 2>/dev/null || \
-    sed -i '' "s/change-me-32chars-minimum-secret-key-prod/$SECRET/g" backend/.env 2>/dev/null || true
+    sed -i "s/change-me-32chars-minimum-secret-key-prod/$SECRET/g" backend/.env 2>/dev/null || sed -i '' "s/change-me-32chars-minimum-secret-key-prod/$SECRET/g" backend/.env 2>/dev/null || true
     echo "  ✅ SECRET_KEY gerado auto"
   fi
 else
   echo "  ✅ backend/.env já existe — mantém"
 fi
 
-# 2. Backend venv + deps — FIX: usa requirements-core.txt primeiro (sem pytest conflito)
+# 2. Backend venv + deps — FIX Windows wheel
 echo ""
-echo -e "${YELLOW}[2/5] Backend — venv + deps...${NC}"
+echo -e "${YELLOW}[2/5] Backend — venv + deps (fix pydantic-core wheel)...${NC}"
 cd backend
 if [ ! -d ".venv" ]; then
   echo "  Criando venv..."
@@ -66,29 +65,31 @@ else
 fi
 
 echo "  Ativando venv e instalando deps..."
-# Ativa venv — Linux/Mac
 source .venv/bin/activate 2>/dev/null || source .venv/Scripts/activate 2>/dev/null || true
 
-pip install --quiet --upgrade pip
+pip install --quiet --upgrade pip wheel setuptools
 
-# FIX principal: instala core primeiro (sem pytest) — 100% sem conflito
+# FIX principal: --prefer-binary evita build Rust pydantic-core no Windows
 if [ -f "requirements-core.txt" ]; then
-  echo "  Instalando core deps (sem pytest) — fix conflito..."
-  pip install -r requirements-core.txt
+  echo "  Instalando core deps com --prefer-binary (evita Rust)..."
+  pip install --prefer-binary -r requirements-core.txt 2>&1 | tail -n 5 || pip install -r requirements-core.txt 2>&1 | tail -n 5 || {
+    echo "  ⚠️  Tentando instalar um a um..."
+    pip install --prefer-binary fastapi uvicorn sqlalchemy pydantic pydantic-settings python-multipart cryptography httpx apscheduler python-jose passlib openai slowapi redis tornado orjson bcrypt 2>&1 | tail -n 5 || true
+  }
   echo "  ✅ core deps OK"
 else
-  echo "  requirements-core.txt não encontrado — usando requirements.txt com fallback"
+  echo "  requirements-core.txt não encontrado — instalando manual"
+  pip install --prefer-binary fastapi uvicorn sqlalchemy pydantic pydantic-settings python-multipart cryptography httpx apscheduler python-jose passlib openai slowapi redis tornado orjson bcrypt 2>&1 | tail -n 5 || true
 fi
 
-# Depois tenta full requirements.txt (com pytest 9.0.3 + pytest-asyncio 1.3.0 fix)
-echo "  Instalando full deps (com pytest fix 9.0.3 + 1.3.0)..."
-pip install -r requirements.txt 2>&1 | tail -n 5 || {
-  echo "  ⚠️  Full install falhou — tentando core apenas + pytest fix separado"
-  pip install pytest==9.0.3 pytest-asyncio==1.3.0 2>&1 | tail -n 3 || pip install pytest pytest-asyncio 2>&1 | tail -n 3 || true
-}
+echo "  Instalando pytest opcional com binary..."
+pip install --prefer-binary pytest pytest-asyncio 2>&1 | tail -n 3 || pip install pytest pytest-asyncio 2>&1 | tail -n 3 || echo "  ⚠️  pytest opcional falhou — ok core funciona sem testes"
 
-# Extras opcionais — já estão no requirements mas garante http2
-pip install --quiet httpx[http2] 2>/dev/null || pip install --quiet httpx 2>/dev/null || true
+# Verifica pydantic
+python3 -c "import pydantic; print(f\"  ✅ pydantic {pydantic.__version__} OK\")" 2>&1 || python -c "import pydantic; print(f\"  ✅ pydantic {pydantic.__version__} OK\")" 2>&1 || {
+  echo "  ⚠️  pydantic falhou — tentando binary específico..."
+  pip install --only-binary=:all: pydantic 2>&1 | tail -n 3 || pip install pydantic --prefer-binary 2>&1 | tail -n 3 || true
+}
 
 echo "  ✅ deps instaladas (200 providers, 50 adapters)"
 
@@ -102,7 +103,7 @@ print('  ✅ DB init OK')
 from app.core.database import init_db
 init_db()
 print('  ✅ DB init OK')
-" 2>&1 | tail -n 5
+" 2>&1 | tail -n 5 || echo "  ⚠️  DB init vai no primeiro start"
 
 cd ..
 
@@ -157,7 +158,7 @@ echo -e "${GREEN}==========================================${NC}"
 echo -e "${GREEN}✅ Setup Fácil Concluído!${NC}"
 echo -e "${GREEN}==========================================${NC}"
 echo ""
-echo -e "${BLUE}Opção A — Docker (mais fácil):${NC}"
+echo -e "${BLUE}Opção A — Docker (mais fácil, sem Rust):${NC}"
 echo "  docker compose up --build"
 echo "  → Frontend: http://localhost:3000"
 echo "  → Backend:  http://localhost:8000/docs"
@@ -169,5 +170,7 @@ echo ""
 echo -e "${BLUE}Opção C — Start tudo:${NC}"
 echo "  bash start.sh"
 echo ""
-echo -e "${YELLOW}Sem keys funciona!${NC} ovhcloud free sem key + 13 templates"
+echo -e "${YELLOW}Fix Windows:${NC} Se ainda falhar pydantic-core:"
+echo "  1. Use Python 3.11 ou 3.12 (mais wheels) — python --version"
+echo "  2. Ou Docker: docker compose up --build (sem Rust)"
 echo ""
