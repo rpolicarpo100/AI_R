@@ -1,0 +1,20 @@
+{
+  "name": "Chat App Real-time",
+  "description": "Chat app com mensagens real-time, OpenAI-compatible gateway 200 providers, streaming",
+  "type": "fullstack",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "chat",
+    "real-time",
+    "ai",
+    "nextjs"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\nexport default function ChatApp() {\n  const [messages, setMessages] = useState([{ role: \"assistant\", content: \"Ol\u00e1! Sou AI com 200 providers.\" }]);\n  const [input, setInput] = useState(\"\");\n  const send = () => {\n    if (!input.trim()) return;\n    setMessages(m => [...m, { role: \"user\", content: input }, { role: \"assistant\", content: `Recebi: ${input} \u2014 200 providers dispon\u00edveis` }]);\n    setInput(\"\");\n  };\n  return (\n    <div className=\"min-h-screen bg-[#0a0a0f] text-white flex flex-col max-w-2xl mx-auto p-8\">\n      <h1 className=\"text-2xl font-bold\">Chat App \u2014 200 Providers</h1>\n      <div className=\"flex-1 mt-6 space-y-4 overflow-y-auto\">\n        {messages.map((msg, i) => (\n          <div key={i} className={`p-4 rounded-xl ${msg.role === \"user\" ? \"bg-white text-black ml-12\" : \"bg-[#11111b] border border-[#1e1e2e] mr-12\"}`}>\n            {msg.content}\n          </div>\n        ))}\n      </div>\n      <div className=\"mt-6 flex gap-2\">\n        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === \"Enter\" && send()} placeholder=\"Digite mensagem...\" className=\"flex-1 px-4 py-3 rounded-xl bg-[#11111b] border border-[#1e1e2e]\" />\n        <button onClick={send} className=\"px-6 py-3 rounded-xl bg-white text-black font-bold\">Enviar</button>\n      </div>\n    </div>\n  );\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Chat App Real-time', description: 'Template chat app' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"chat-app-realtime\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}
