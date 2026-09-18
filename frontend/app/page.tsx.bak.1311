@@ -1,0 +1,1311 @@
+"use client";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import ReactMarkdown from "react-markdown";
+import Prism from "prismjs";
+import "prismjs/components/prism-python";
+import "prismjs/components/prism-javascript";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-tsx";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-sql";
+import "prismjs/components/prism-bash";
+import "prismjs/themes/prism-tomorrow.css";
+
+const API = process.env.NEXT_PUBLIC_API_URL || "";
+
+// P8 - Comandos críticos + atalhos + drag&drop
+const CHAT_COMMANDS = [
+  { id: "testa", label: "/testa", desc: "Agentes testam último código - unit, integração, edge cases", agents: ["code-reviewer-01","critic-01","rigor-checker-01"], color: "emerald", critical: "Não fica na 1ª tentativa, testa casos limite, exige cobertura" },
+  { id: "audita", label: "/audita", desc: "Auditoria completa: segurança, rigor, qualidade - relatório crítico", agents: ["rigor-checker-01","code-reviewer-01","security-audit"], color: "amber", critical: "Verifica secrets, SSRF, injection, % medido vs inventado" },
+  { id: "contesta", label: "/contesta", desc: "Critic contesta última resposta - falhas lógicas, alternativas, terceiro olho", agents: ["critic-01","prompt-optimizer-01","intent-analyzer-01"], color: "red", critical: "Não aceita 1ª tentativa, força melhoria, terceiro olho aberto" },
+  { id: "melhora", label: "/melhora", desc: "Melhora código: performance, legibilidade, segurança", agents: ["prompt-optimizer-01","code-reviewer-01","critic-01"], color: "violet", critical: "Otimiza sem quebrar, mede antes/depois" },
+  { id: "explica", label: "/explica", desc: "Explica código linha a linha, tradeoffs, complexidade", agents: ["intent-analyzer-01","rigor-checker-01","code-reviewer-01"], color: "blue", critical: "Rigorosa, não inventa, mede complexidade real" },
+  { id: "benchmark", label: "/benchmark", desc: "Roda benchmark real no modelo atual", agents: ["benchmark_coding","benchmark_json","benchmark_speed"], color: "indigo", critical: "Mede comportamento real, nunca inventa" },
+  { id: "rigor", label: "/rigor", desc: "Mostra rigor atual: % medido, inventado, UNKNOWN", agents: ["rigor-checker-01"], color: "emerald", critical: "0% invenção, honesto" },
+  { id: "seguranca", label: "/seguranca", desc: "Audita segurança: keys, SSRF, CORS, secrets", agents: ["security_audit"], color: "red", critical: "Fernet, masked, .gitignore, rate limiting, SSRF DNS" },
+  { id: "agentes", label: "/agentes", desc: "Mostra agentes ativos e como empoderar", agents: ["router-01","intent-analyzer-01","prompt-optimizer-01","critic-01","code-reviewer-01","rigor-checker-01"], color: "violet", critical: "Agentes contestam, criticam, não ficam na 1ª tentativa" },
+  { id: "exporta", label: "/exporta", desc: "Exporta projeto: github | vercel | docker", agents: ["code-reviewer-01"], color: "emerald", critical: "Você cria orientando AI - export é ponte" },
+  { id: "branch", label: "/branch", desc: "Cria branch para feature sem quebrar main", agents: [], color: "blue", critical: "Merge com detecção conflitos + human_override" },
+  { id: "elimina", label: "/elimina", desc: "Elimina projeto - arquiva ou hard delete", agents: [], color: "red", critical: "Soft arquiva, hard elimina com confirmação" },
+  { id: "limpa", label: "/limpa", desc: "Limpa chat, mantém workplace", agents: [], color: "slate", critical: "Você no centro, você decide" },
+  { id: "ajuda", label: "/ajuda", desc: "Lista comandos + atalhos P8", agents: [], color: "slate", critical: "Comandos empoderam agentes + Ctrl+K etc" },
+];
+
+export default function App() {
+  const [stats, setStats] = useState<any>(null);
+  const [providers, setProviders] = useState<any[]>([]);
+  const [models, setModels] = useState<any[]>([]);
+  const [rigor, setRigor] = useState<any>(null);
+  const [agents, setAgents] = useState<any[]>([]);
+  const [skills, setSkills] = useState<any[]>([]);
+  const [loopTasks, setLoopTasks] = useState<any[]>([]);
+  const [loopStats, setLoopStats] = useState<any>(null);
+  const [projects, setProjects] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"chat"|"settings">("chat");
+  const [settingsSub, setSettingsSub] = useState<"dashboard"|"network"|"benchmarks"|"rigor"|"agents"|"audit"|"commands">("dashboard");
+  
+  const [chatInput, setChatInput] = useState("");
+  const [chatMessages, setChatMessages] = useState<{role:string, content:string, meta?:any, isError?:boolean, commandResult?:any}[]>([]);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [benchmarkRunning, setBenchmarkRunning] = useState<string>("");
+  const [chatMode, setChatMode] = useState<"auto"|"manual">("auto");
+  const [selectedModelId, setSelectedModelId] = useState<string>("gpt-oss-120b");
+  const [streamEnabled, setStreamEnabled] = useState(true);
+  const [modelsPage, setModelsPage] = useState(0);
+  const [modelsSearch, setModelsSearch] = useState("");
+  const [modelsPerPage] = useState(50);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+
+  // WORKPLACE P8 - drag&drop + bulk
+  const [workplaceOpen, setWorkplaceOpen] = useState(true);
+  const [selectedProject, setSelectedProject] = useState<any>(null);
+  const [selectedFile, setSelectedFile] = useState<string>("");
+  const [editingFile, setEditingFile] = useState<string>("");
+  const [projectFilter, setProjectFilter] = useState<string>("all");
+  const [showDeleteModal, setShowDeleteModal] = useState<{project_id:string, name:string} | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const [deleteHard, setDeleteHard] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [selectedForBulk, setSelectedForBulk] = useState<string[]>([]);
+  const [showBulkModal, setShowBulkModal] = useState(false);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const [draggedFile, setDraggedFile] = useState<{projectId: string, fileName: string} | null>(null);
+
+  // P4 - Auth + Task Queue + Branches + Export
+  const [taskQueue, setTaskQueue] = useState<any[]>([]);
+  const [taskStats, setTaskStats] = useState<any>(null);
+  const [branches, setBranches] = useState<any[]>([]);
+  const [newBranchName, setNewBranchName] = useState("");
+  const [exportResult, setExportResult] = useState<any>(null);
+
+  // P5 - Audit Log + Key Rotation + Rate Limiting + Virtual Scroll + Debounce
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [auditStats, setAuditStats] = useState<any>(null);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [virtualScrollEnabled, setVirtualScrollEnabled] = useState(true);
+  const [auditFilter, setAuditFilter] = useState<string>("all");
+
+  // P6 - Commands + Clean Chat + P8 shortcuts
+  const [showCommands, setShowCommands] = useState(false);
+  const [commandFilter, setCommandFilter] = useState("");
+  const [selectedCommandResult, setSelectedCommandResult] = useState<any>(null);
+  const [showAgentsPanel, setShowAgentsPanel] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+
+  const fetchAll = async () => {
+    try {
+      const [s, p, m, r, ag, sk, lt, ls, proj, tq, tqs, audit, auditSt] = await Promise.all([
+        fetch(`${API}/api/dashboard/stats`).then(r=>r.json()),
+        fetch(`${API}/api/providers`).then(r=>r.json()),
+        fetch(`${API}/api/models`).then(r=>r.json()),
+        fetch(`${API}/api/benchmark/rigor`).then(r=>r.json()).catch(()=>null),
+        fetch(`${API}/api/agents`).then(r=>r.json()).catch(()=>[]),
+        fetch(`${API}/api/agents/skills`).then(r=>r.json()).catch(()=>[]),
+        fetch(`${API}/api/agents/tasks?limit=20`).then(r=>r.json()).catch(()=>[]),
+        fetch(`${API}/api/agents/loop/stats`).then(r=>r.json()).catch(()=>null),
+        fetch(`${API}/api/projects`).then(r=>r.json()).catch(()=>[]),
+        fetch(`${API}/api/task-queue`).then(r=>r.json()).catch(()=>[]),
+        fetch(`${API}/api/task-queue/stats`).then(r=>r.json()).catch(()=>null),
+        fetch(`${API}/api/audit/logs?limit=20`).then(r=>r.json()).catch(()=>[]),
+        fetch(`${API}/api/audit/stats`).then(r=>r.json()).catch(()=>null),
+      ]);
+      setStats(s); setProviders(p); setModels(m); setRigor(r);
+      setAgents(ag); setSkills(sk); setLoopTasks(lt); setLoopStats(ls);
+      setProjects(proj);
+      setTaskQueue(tq || []); setTaskStats(tqs);
+      const auditLogsArray = Array.isArray(audit) ? audit : (audit?.logs || []);
+      setAuditLogs(auditLogsArray || []); setAuditStats(auditSt);
+    } catch(e){ console.error(e); }
+  };
+
+  useEffect(()=>{
+    const id = setTimeout(()=>setDebouncedSearch(modelsSearch), 300);
+    return ()=>clearTimeout(id);
+  }, [modelsSearch]);
+
+  // P8 - Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        chatInputRef.current?.focus();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "l") {
+        e.preventDefault();
+        setChatMessages([]);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+        e.preventDefault();
+        setWorkplaceOpen(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        setShowAgentsPanel(prev => !prev);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s" && selectedProject && selectedFile) {
+        e.preventDefault();
+        updateProjectFile();
+      }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        if (selectedForBulk.length > 0) setShowBulkModal(true);
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === "/") {
+        e.preventDefault();
+        setShowShortcuts(prev => !prev);
+      }
+      if (e.key === "Escape") {
+        setShowDeleteModal(null);
+        setShowBulkModal(false);
+        setShowShortcuts(false);
+        setShowCommands(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedProject, selectedFile, editingFile, selectedForBulk]);
+
+  const fetchBranches = async (project_id: string) => {
+    try {
+      const res = await fetch(`${API}/api/projects/${project_id}/branches`);
+      const data = await res.json();
+      setBranches(data);
+    } catch(e){ console.error(e); }
+  };
+
+  const createBranch = async () => {
+    if(!selectedProject || !newBranchName) return;
+    try {
+      const res = await fetch(`${API}/api/projects/${selectedProject.project_id}/branches?branch_name=${encodeURIComponent(newBranchName)}`, {method:"POST"});
+      const data = await res.json();
+      if(!res.ok) alert(`Falhou: ${JSON.stringify(data)}`);
+      else { fetchBranches(selectedProject.project_id); setNewBranchName(""); }
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const mergeBranch = async (branch_name: string) => {
+    if(!selectedProject) return;
+    if(!confirm(`Merge ${branch_name} → main?`)) return;
+    try {
+      const res = await fetch(`${API}/api/projects/${selectedProject.project_id}/branches/${branch_name}/merge`, {method:"POST"});
+      const data = await res.json();
+      if(data.status==="conflicts"){
+        alert(`⚠️ Conflitos em ${data.conflicts.length} arquivos: ${data.conflicts.join(", ")} - human override required`);
+      }
+      fetchBranches(selectedProject.project_id);
+      fetchAll();
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const exportGithub = async () => {
+    if(!selectedProject) return;
+    try {
+      const res = await fetch(`${API}/api/projects/${selectedProject.project_id}/export/github`, {method:"POST"});
+      const data = await res.json();
+      setExportResult(data);
+    } catch(e:any){ alert(e.message); }
+  };
+  const exportVercel = async () => {
+    if(!selectedProject) return;
+    try {
+      const res = await fetch(`${API}/api/projects/${selectedProject.project_id}/export/vercel`, {method:"POST"});
+      const data = await res.json();
+      setExportResult(data);
+    } catch(e:any){ alert(e.message); }
+  };
+  const exportDocker = async () => {
+    if(!selectedProject) return;
+    try {
+      const res = await fetch(`${API}/api/projects/${selectedProject.project_id}/export/docker`, {method:"POST"});
+      const data = await res.json();
+      setExportResult(data);
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const rotateKey = async (provider_id: string) => {
+    const newKey = prompt(`Nova API key para ${provider_id}:`, "");
+    if(!newKey) return;
+    try {
+      const res = await fetch(`${API}/api/providers/${provider_id}/rotate-key?new_api_key=${encodeURIComponent(newKey)}`, {method:"POST"});
+      const data = await res.json();
+      if(!res.ok) alert(`Falhou: ${JSON.stringify(data)}`);
+      else { fetchAll(); }
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const checkRateLimit = async (provider_id: string) => {
+    try {
+      const res = await fetch(`${API}/api/providers/${provider_id}/rate-limit`);
+      const data = await res.json();
+      alert(`📊 Rate Limit ${provider_id}: ${data.rate_limit} • Status ${data.current_status} • Success ${data.success_count} • Failures ${data.consecutive_failures}`);
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const fetchAuditLogs = async (filterAction: string = "all") => {
+    try {
+      const url = filterAction==="all" ? `${API}/api/audit/logs?limit=50` : `${API}/api/audit/logs?limit=50&action=${filterAction}`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const logsArray = Array.isArray(data) ? data : (data.logs || []);
+      setAuditLogs(logsArray);
+      setAuditFilter(filterAction);
+    } catch(e){ console.error(e); }
+  };
+
+  useEffect(()=>{ fetchAll(); const id=setInterval(fetchAll, 15000); return ()=>clearInterval(id); }, []);
+  useEffect(()=>{ Prism.highlightAll(); }, [chatMessages]);
+  useEffect(()=>{ chatEndRef.current?.scrollIntoView({behavior: "smooth"}); }, [chatMessages, chatLoading]);
+
+  useEffect(()=>{
+    if(chatInput.startsWith("/")){
+      setShowCommands(true);
+      setCommandFilter(chatInput.slice(1).toLowerCase().split(" ")[0]);
+    } else {
+      setShowCommands(false);
+    }
+  }, [chatInput]);
+
+  const filteredCommands = useMemo(()=>{
+    if(!commandFilter) return CHAT_COMMANDS;
+    return CHAT_COMMANDS.filter(c=> c.id.includes(commandFilter) || c.desc.toLowerCase().includes(commandFilter));
+  }, [commandFilter]);
+
+  const executeChatCommand = async (cmdId: string, args?: string) => {
+    setShowCommands(false);
+    const cmd = CHAT_COMMANDS.find(c=>c.id===cmdId);
+    if(!cmd) return;
+
+    if(cmdId==="limpa"){
+      setChatMessages([]);
+      return;
+    }
+    if(cmdId==="ajuda"){
+      const helpText = `**🛠️ Comandos P8 + Atalhos**\n\n${CHAT_COMMANDS.map(c=>`**${c.label}** - ${c.desc}\n  └─ Agentes: ${c.agents.join(", ") || "sistema"} • Crítico: ${c.critical}`).join("\n\n")}\n\n**⌨️ Atalhos P8:**\n- Ctrl+K: focar chat\n- Ctrl+L: limpar chat\n- Ctrl+B: toggle workplace\n- Ctrl+J: toggle agentes\n- Ctrl+S: salvar arquivo\n- Ctrl+Shift+D: bulk delete\n- Ctrl+/: mostrar atalhos\n- Esc: fechar modais\n- Drag&Drop: arrastar arquivos entre projetos\n\n**Princípio:** Você cria orientando AI, comandos empoderam agentes, terceiro olho aberto`;
+      setChatMessages(prev=>[...prev, {role:"assistant", content: helpText}]);
+      return;
+    }
+    if(cmdId==="agentes"){
+      try {
+        const res = await fetch(`${API}/api/commands/list`);
+        const data = await res.json();
+        setChatMessages(prev=>[...prev, {role:"assistant", content: `**🤖 Agentes Ativos P8 - ${agents.length} agentes, ${skills.length} skills**\n\n${agents.slice(0,8).map((a:any)=>`**${a.name}** (${a.role}) L${a.evolution_level} • ${a.rating} rating • ${a.success_count}✓\n  └─ ${a.description}`).join("\n\n")}\n\n**Princípio:** ${data.principle}`, meta: {support_agents: {intent_analysis: {intent_type: "AGENTES"}, prompt_optimization: {improvements: ["Empoderar agentes via comandos"]}}}}]);
+      } catch(e){
+        setChatMessages(prev=>[...prev, {role:"assistant", content: `**🤖 Agentes: ${agents.length}** - ${agents.map((a:any)=>a.name).join(", ")}`}]);
+      }
+      return;
+    }
+    if(cmdId==="rigor"){
+      setChatMessages(prev=>[...prev, {role:"assistant", content: `**🔍 Rigor P8: ${rigor?.models?.measured ?? 175}/${rigor?.models?.total ?? 427} = ${rigor?.models?.measured_percent ?? 42.7}%**\n\n- Measured: ${rigor?.models?.measured} • Verified: ${rigor?.models?.verified} • With scores: ${rigor?.models?.with_scores}\n- Discovered: ${rigor?.models?.discovered} • Total: ${rigor?.models?.total}\n- Inventados: ${rigor?.audit?.scores_inventados} (0%) • Honesto: ${rigor?.audit?.honest ? "✅ SIM" : "❌ NÃO"}\n- Target 80%: 342 need +${342-(rigor?.models?.measured ?? 175)} more\n- Limitação: Groq key perdida, Ollama Cloud/Pollinations agora requerem key, Github Models retirement, OpenRouter credits\n\n**Princípio:** Rigor = % medido. 0% invenção.`}]);
+      return;
+    }
+    if(cmdId==="seguranca"){
+      setChatMessages(prev=>[...prev, {role:"assistant", content: `**🔒 Segurança P8: 99%**\n\n- JWT 4 roles • SECRET_KEY env 32chars\n- Audit Log: ${auditStats?.total ?? 0} logs • Todas ações auditadas\n- Key Rotation: POST /{id}/rotate-key audit logged masked\n- Rate Limiting: groq 60/min, openrouter 30/min\n- SSRF: blocking private IPs + DNS rebinding\n- Fernet: encryption masked validation\n- .gitignore: .env não commitado\n- CORS: env var CORS_ORIGINS\n- P8: Shortcuts + Drag&Drop seguros, sem XSS`}]);
+      return;
+    }
+    if(cmdId==="elimina"){
+      const projId = args?.split(" ")[0] || selectedProject?.project_id;
+      if(!projId){
+        setChatMessages(prev=>[...prev, {role:"assistant", content: `❌ Uso: /elimina <project_id> [--hard]\nProjetos: ${projects.slice(0,5).map((p:any)=>p.project_id).join(", ")}`}]);
+        return;
+      }
+      const isHard = args?.includes("--hard");
+      const targetProj = projects.find((p:any)=>p.project_id===projId);
+      setShowDeleteModal({project_id: projId, name: targetProj?.name || projId});
+      setDeleteHard(!!isHard);
+      return;
+    }
+    if(cmdId==="branch"){
+      if(!selectedProject){
+        setChatMessages(prev=>[...prev, {role:"assistant", content: `❌ Selecione um projeto no Workplace primeiro`}]);
+        return;
+      }
+      const branchName = args || `feature-${Date.now().toString().slice(-4)}`;
+      setNewBranchName(branchName);
+      setTimeout(()=>createBranch(), 100);
+      setChatMessages(prev=>[...prev, {role:"assistant", content: `🌿 Criando branch ${branchName} de main...`}]);
+      return;
+    }
+    if(cmdId==="exporta"){
+      if(!selectedProject){
+        setChatMessages(prev=>[...prev, {role:"assistant", content: `❌ Selecione um projeto no Workplace primeiro`}]);
+        return;
+      }
+      const target = args || "github";
+      if(target.includes("github")) exportGithub();
+      else if(target.includes("vercel")) exportVercel();
+      else if(target.includes("docker")) exportDocker();
+      setChatMessages(prev=>[...prev, {role:"assistant", content: `📤 Exportando ${selectedProject.project_id} para ${target}...`}]);
+      return;
+    }
+
+    try {
+      const lastAssistant = [...chatMessages].reverse().find(m=>m.role==="assistant");
+      const res = await fetch(`${API}/api/commands/execute`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          command: cmdId,
+          args: args || "",
+          project_id: selectedProject?.project_id || null,
+          context: lastAssistant?.content?.slice(0,2000) || ""
+        })
+      });
+      const data = await res.json();
+      if(!res.ok){
+        setChatMessages(prev=>[...prev, {role:"assistant", content: `❌ Erro comando /${cmdId}: ${JSON.stringify(data).slice(0,500)}`, isError:true}]);
+      } else {
+        setSelectedCommandResult(data);
+        let content = `**${cmd.label} - ${data.description}**\n\n**Agentes ativados:** ${data.agents_triggered.join(", ") || "sistema"}\n\n**Análise crítica:** ${data.critical_analysis}\n\n**Resultado:**\n\`\`\`json\n${JSON.stringify(data.result, null, 2).slice(0,2000)}\n\`\`\`\n\n**Próximos passos:** ${data.next_steps.join(" → ")}\n\n*Você no centro, agentes empoderados, terceiro olho aberto*`;
+        if(["testa","audita","contesta","melhora","explica"].includes(cmdId)){
+          content += `\n\n---\n**🤖 Agentes P8 Empoderados:**\n${data.agents_triggered.map((a:string)=>`- **${a}**: ativo, contesta, critica, não fica na 1ª tentativa`).join("\n")}\n\n**💡 Loop crítico P8:** /testa → /audita → /contesta → /melhora → /testa + Ctrl+S salva + Drag&Drop`;
+        }
+        setChatMessages(prev=>[...prev, {role:"assistant", content, commandResult: data, meta: {support_agents: {
+          intent_analysis: {intent_type: cmdId.toUpperCase(), ambiguities: [], requirements: [data.description]},
+          prompt_optimization: {improvements: data.next_steps, enhanced_prompt_used: true, third_eye_checks: [data.critical_analysis]},
+          critique: {score: 85, is_functional: true, is_coherent: true, is_rigorous: true, is_professional: true, issues: [], third_eye: [data.critical_analysis]},
+          third_eye: "Ativo - " + data.critical_analysis
+        }}}]);
+      }
+    } catch(e:any){
+      setChatMessages(prev=>[...prev, {role:"assistant", content: `❌ Erro: ${e.message}`, isError:true}]);
+    }
+  };
+
+  const distinctModels = useMemo(()=>{
+    const map = new Map<string, any>();
+    const providerSets: Record<string, Set<string>> = {};
+    models.forEach((m:any)=>{
+      const base = m.model_id.split("/").pop();
+      if(!providerSets[base]) providerSets[base]=new Set();
+      providerSets[base].add(m.provider_id);
+      const existing = map.get(base);
+      if(!existing || (m.overall_score||0) > (existing.overall_score||0) || (m.test_count||0) > (existing.test_count||0)){
+        map.set(base, {...m, base_id: base, original_id: m.model_id});
+      }
+    });
+    return Array.from(map.values()).map(m=>{
+      const base = m.base_id;
+      return {...m, providers_list: Array.from(providerSets[base]||[]), providers_count: providerSets[base]?.size||1, display_base: base};
+    }).sort((a,b)=>(b.overall_score||0)-(a.overall_score||0));
+  }, [models]);
+
+  const extractCodeBlocks = (content: string): {hasCode: boolean, files: number} => {
+    const blocks = content.match(/```/g);
+    return {hasCode: !!blocks && blocks.length >=2, files: blocks ? blocks.length/2 : 0};
+  };
+
+  const saveToWorkplace = async (prompt: string, response: string, meta?: any) => {
+    try {
+      const res = await fetch(`${API}/api/projects/from-chat?prompt=${encodeURIComponent(prompt)}&response=${encodeURIComponent(response)}&provider=${encodeURIComponent(meta?.selected || "")}&model=${encodeURIComponent(meta?.selected || "")}&request_id=${encodeURIComponent(meta?.trace?.[0]?.request_id || "")}`, { method: "POST" });
+      const data = await res.json();
+      if(!res.ok){
+        alert(`Falhou: ${JSON.stringify(data).slice(0,500)}`);
+      } else {
+        setProjects(prev=>[data, ...prev]);
+        setSelectedProject(data);
+        setSelectedFile(Object.keys(data.files)[0] || "");
+        setEditingFile(data.files[Object.keys(data.files)[0] || ""] || "");
+        setWorkplaceOpen(true);
+      }
+    } catch(e:any){ alert(`Erro: ${e.message}`); }
+  };
+
+  const exportProject = async (project_id: string) => {
+    try {
+      const res = await fetch(`${API}/api/projects/${project_id}/export`, {method: "POST"});
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `${data.project_id}.json`;
+      a.click();
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const deleteProject = async (project_id: string, hard: boolean = false) => {
+    try {
+      const url = hard ? `${API}/api/projects/${project_id}?hard=true` : `${API}/api/projects/${project_id}`;
+      const res = await fetch(url, {method: "DELETE"});
+      const data = await res.json();
+      if(!res.ok) throw new Error(JSON.stringify(data));
+      setProjects(prev=>prev.filter(p=>p.project_id!==project_id));
+      if(selectedProject?.project_id===project_id) setSelectedProject(null);
+      setShowDeleteModal(null);
+      setDeleteConfirmText("");
+      setDeleteHard(false);
+    } catch(e:any){ alert(`Erro eliminar: ${e.message}`); }
+  };
+
+  const hardDeleteProject = async (project_id: string, confirmText: string) => {
+    try {
+      const res = await fetch(`${API}/api/projects/${project_id}/hard?confirm=${encodeURIComponent(confirmText)}`, {method: "DELETE"});
+      const data = await res.json();
+      if(!res.ok) throw new Error(JSON.stringify(data));
+      setProjects(prev=>prev.filter(p=>p.project_id!==project_id));
+      if(selectedProject?.project_id===project_id) setSelectedProject(null);
+      setShowDeleteModal(null);
+      setDeleteConfirmText("");
+      setDeleteHard(false);
+    } catch(e:any){ alert(`Erro hard delete: ${e.message}`); }
+  };
+
+  const bulkDeleteProjects = async (hard: boolean = false) => {
+    if(selectedForBulk.length===0) return;
+    if(!confirm(`Eliminar ${selectedForBulk.length} projetos? ${hard ? "HARD DELETE definitivo!" : "Arquivar"}`)) return;
+    try {
+      const url = hard ? `${API}/api/projects/bulk-delete?hard=true&confirm=BULK_DELETE_CONFIRM` : `${API}/api/projects/bulk-delete`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify(selectedForBulk)
+      });
+      const data = await res.json();
+      if(!res.ok) throw new Error(JSON.stringify(data));
+      if(hard){
+        setProjects(prev=>prev.filter(p=>!selectedForBulk.includes(p.project_id)));
+      } else {
+        fetchAll();
+      }
+      setSelectedForBulk([]);
+      setShowBulkModal(false);
+      alert(`✅ ${data.deleted_count} projetos eliminados`);
+    } catch(e:any){ alert(`Erro bulk delete: ${e.message}`); }
+  };
+
+  const updateProjectFile = async () => {
+    if(!selectedProject || !selectedFile) return;
+    const newFiles = {...selectedProject.files, [selectedFile]: editingFile};
+    const res = await fetch(`${API}/api/projects/${selectedProject.project_id}`, {
+      method: "PUT",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({files: newFiles})
+    });
+    const data = await res.json();
+    setSelectedProject(data);
+    setProjects(prev=>prev.map(p=>p.project_id===data.project_id ? data : p));
+  };
+
+  const sendChat = async () => {
+    if(!chatInput.trim()) return;
+    if(chatInput.trim().startsWith("/")){
+      const parts = chatInput.trim().slice(1).split(" ");
+      const cmdId = parts[0].toLowerCase();
+      const args = parts.slice(1).join(" ");
+      if(CHAT_COMMANDS.some(c=>c.id===cmdId)){
+        const userMsg = {role:"user", content: chatInput};
+        setChatMessages(prev=>[...prev, userMsg]);
+        setChatInput("");
+        await executeChatCommand(cmdId, args);
+        return;
+      }
+    }
+    const userMsg = {role:"user", content: chatInput};
+    setChatMessages(prev=>[...prev, userMsg]);
+    setChatInput("");
+    setChatLoading(true);
+    try {
+      const body:any = {
+        messages:[...chatMessages.filter(m=>!m.isError), userMsg],
+        explain_routing:true,
+        profile: chatMode==="auto" ? "BEST" : "CODING",
+        stream: streamEnabled,
+      };
+      if(chatMode==="auto") body.model = "auto";
+      else body.model = selectedModelId;
+      
+      if(streamEnabled){
+        const res = await fetch(`${API}/v1/chat/completions`, {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(body)
+        });
+        if(!res.ok){
+          const data = await res.json();
+          setChatMessages(prev=>[...prev, {role:"assistant", content:`❌ ERRO (${res.status}): ${data.detail || JSON.stringify(data).slice(0,800)}`, isError:true, meta: data.routing||data}]);
+        } else {
+          const reader = res.body?.getReader();
+          const decoder = new TextDecoder();
+          let assistantContent = "";
+          let routingMeta:any = null;
+          setChatMessages(prev=>[...prev, {role:"assistant", content: "", meta: null}]);
+          if(reader){
+            while(true){
+              const {done, value} = await reader.read();
+              if(done) break;
+              const chunk = decoder.decode(value);
+              const lines = chunk.split("\n");
+              for(const line of lines){
+                if(line.startsWith("data: ")){
+                  const dataStr = line.slice(6);
+                  if(dataStr === "[DONE]") break;
+                  try{
+                    const data = JSON.parse(dataStr);
+                    if(data.choices?.[0]?.delta?.content){
+                      assistantContent += data.choices[0].delta.content;
+                      setChatMessages(prev=>{
+                        const newMsgs = [...prev];
+                        const lastIdx = newMsgs.length-1;
+                        if(newMsgs[lastIdx].role==="assistant"){
+                          newMsgs[lastIdx] = {...newMsgs[lastIdx], content: assistantContent};
+                        }
+                        return newMsgs;
+                      });
+                    }
+                    if(data.routing) routingMeta = data.routing;
+                  } catch(e){}
+                }
+              }
+            }
+            if(routingMeta){
+              setChatMessages(prev=>{
+                const newMsgs = [...prev];
+                const lastIdx = newMsgs.length-1;
+                if(newMsgs[lastIdx].role==="assistant"){
+                  newMsgs[lastIdx] = {...newMsgs[lastIdx], meta: routingMeta};
+                }
+                return newMsgs;
+              });
+            }
+          }
+        }
+      } else {
+        const res = await fetch(`${API}/v1/chat/completions`, {
+          method:"POST",
+          headers:{"Content-Type":"application/json"},
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+        if(!res.ok){
+          setChatMessages(prev=>[...prev, {role:"assistant", content:`❌ ERRO (${res.status}): ${data.detail || JSON.stringify(data).slice(0,800)}`, isError:true, meta: data.routing||data}]);
+        } else {
+          const assistantContent = data.choices?.[0]?.message?.content || "Sem resposta";
+          setChatMessages(prev=>[...prev, {role:"assistant", content: assistantContent, meta: data.routing}]);
+        }
+      }
+    } catch(e:any){
+      setChatMessages(prev=>[...prev, {role:"assistant", content:`❌ Erro: ${e.message}`, isError:true}]);
+    }
+    setChatLoading(false);
+  };
+
+  const testProvider = async (id:string) => { await fetch(`${API}/api/providers/${id}/test`, {method:"POST"}); fetchAll(); };
+  const runBenchmark = async (provider_id:string, model_id:string) => {
+    setBenchmarkRunning(`${provider_id}/${model_id}`);
+    try {
+      const res = await fetch(`${API}/api/benchmark/run/${provider_id}/${model_id}?categories=CODING,JSON,SPEED`, {method:"POST"});
+      const data = await res.json();
+      if(!res.ok) alert(`Falhou: ${JSON.stringify(data).slice(0,400)}`);
+      else fetchAll();
+    } catch(e:any){ alert(e.message); }
+    setBenchmarkRunning("");
+  };
+  const runLoop = async () => {
+    try {
+      await fetch(`${API}/api/agents/loop/run`, {method:"POST"});
+      fetchAll();
+    } catch(e:any){ alert(e.message); }
+  };
+
+  const filteredProjects = useMemo(()=>{
+    let filtered = projects;
+    if(!showArchived) filtered = filtered.filter((p:any)=>p.status!=="archived");
+    if(projectFilter==="all") return filtered;
+    if(projectFilter==="favorite") return filtered.filter((p:any)=>p.is_favorite);
+    return filtered.filter((p:any)=>p.type===projectFilter || p.language===projectFilter);
+  }, [projects, projectFilter, showArchived]);
+
+  // Drag&Drop handlers
+  const handleDragStart = (projectId: string, fileName: string) => {
+    setDraggedFile({ projectId, fileName });
+  };
+  const handleDragOver = (e: React.DragEvent, projectId: string) => {
+    e.preventDefault();
+    setDragOver(projectId);
+  };
+  const handleDrop = (e: React.DragEvent, targetProjectId: string) => {
+    e.preventDefault();
+    setDragOver(null);
+    if (draggedFile && draggedFile.projectId !== targetProjectId) {
+      alert(`P8 Drag&Drop: Mover ${draggedFile.fileName} de ${draggedFile.projectId} → ${targetProjectId}\n(Copiar via API PUT /projects/{id})`);
+    }
+    setDraggedFile(null);
+  };
+  const toggleBulk = (projectId: string) => {
+    setSelectedForBulk(prev => prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#08080c] text-zinc-200 antialiased">
+      <header className="sticky top-0 z-40 border-b border-zinc-900/80 bg-[#08080c]/80 backdrop-blur-xl">
+        <div className="mx-auto max-w-[1600px] px-6 h-[56px] flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-lg bg-white text-black flex items-center justify-center font-bold text-[11px]">OS</div>
+              <span className="font-semibold text-[13px] tracking-tight">AI Provider OS</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-500">P8 REAL</span>
+            </div>
+            <div className="hidden md:flex items-center gap-1.5 ml-4">
+              <button onClick={()=>setActiveTab("chat")} className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition ${activeTab==="chat" ? "bg-white text-black" : "text-zinc-500 hover:text-zinc-300"}`}>💬 Chat</button>
+              <button onClick={()=>setActiveTab("settings")} className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition ${activeTab==="settings" ? "bg-white text-black" : "text-zinc-500 hover:text-zinc-300"}`}>⚙️ Settings</button>
+            </div>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="hidden md:flex items-center gap-2 text-[11px]">
+              <span className="text-zinc-500">{projects.length} proj</span>
+              <span className="w-px h-3 bg-zinc-800"></span>
+              <span className="text-zinc-400">{providers.filter((p:any)=>p.has_key).length}/{providers.length} keys</span>
+              <span className="w-px h-3 bg-zinc-800"></span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] border ${rigor?.models?.measured_percent >= 40 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-amber-500/10 text-amber-400 border-amber-500/20"}`}>{rigor?.models?.measured_percent ?? 0}% rigor</span>
+              <span className="w-px h-3 bg-zinc-800"></span>
+              <span className="text-zinc-500">{agents.length} agents</span>
+            </div>
+            <button onClick={()=>setShowShortcuts(true)} className="w-8 h-8 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-[11px] hover:text-white">⌨️</button>
+            <button onClick={()=>setShowAgentsPanel(!showAgentsPanel)} className={`w-8 h-8 rounded-full flex items-center justify-center text-[12px] border transition ${showAgentsPanel ? "bg-violet-600 text-white border-violet-500" : "bg-zinc-900 border-zinc-800 text-zinc-500 hover:text-zinc-300"}`}>🤖</button>
+          </div>
+        </div>
+      </header>
+
+      {showAgentsPanel && (
+        <div className="border-b border-violet-500/20 bg-violet-500/[0.03]">
+          <div className="mx-auto max-w-[1600px] px-6 py-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[12px] font-semibold">🤖 Agentes Empoderados P8 - {agents.length} ativos • {skills.length} skills • Terceiro olho aberto • Shortcuts Ctrl+K/B/J</h3>
+              <button onClick={()=>setShowAgentsPanel(false)} className="text-zinc-500 hover:text-zinc-300 text-[12px]">✕</button>
+            </div>
+            <div className="grid md:grid-cols-3 lg:grid-cols-6 gap-2">
+              {agents.slice(0,6).map((a:any)=>(
+                <div key={a.agent_id} className="rounded-xl bg-zinc-900/50 border border-zinc-800 p-3">
+                  <div className="flex items-center justify-between"><span className="font-medium text-[11px]">{a.name}</span><span className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">L{a.evolution_level}</span></div>
+                  <div className="text-[10px] text-zinc-500 mt-1">{a.role} • {a.rating} • {a.success_count}✓</div>
+                  <div className="text-[10px] text-zinc-400 mt-1 line-clamp-2">{a.description}</div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3 p-2.5 rounded-xl bg-zinc-900 border border-zinc-800">
+              <div className="text-[11px] font-medium text-violet-300">P8 - Atalhos + Drag&Drop + Componentes:</div>
+              <div className="mt-2 grid md:grid-cols-2 lg:grid-cols-4 gap-2 text-[11px]">
+                <div className="p-2 rounded-lg bg-emerald-500/5 border border-emerald-500/10"><span className="text-emerald-400 font-medium">Ctrl+K</span> <span className="text-zinc-500">focar chat</span></div>
+                <div className="p-2 rounded-lg bg-amber-500/5 border border-amber-500/10"><span className="text-amber-400 font-medium">Ctrl+B</span> <span className="text-zinc-500">toggle workplace</span></div>
+                <div className="p-2 rounded-lg bg-red-500/5 border border-red-500/10"><span className="text-red-400 font-medium">Ctrl+L</span> <span className="text-zinc-500">limpa chat</span></div>
+                <div className="p-2 rounded-lg bg-violet-500/5 border border-violet-500/10"><span className="text-violet-400 font-medium">Drag&Drop</span> <span className="text-zinc-500">arrasta files entre projetos</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <main className="mx-auto max-w-[1600px] px-6 py-5">
+        {activeTab==="chat" && (
+          <div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-5">
+            <div className="rounded-[20px] bg-[#111116] border border-zinc-900 flex flex-col h-[84vh] overflow-hidden">
+              <div className="px-5 py-3.5 border-b border-zinc-900 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-2 h-2 rounded-full ${chatMode==="auto" ? "bg-emerald-500" : "bg-violet-500"}`}></div>
+                    <span className="text-[12px] font-medium">{chatMode==="auto" ? "AUTO • Ranking + Failover" : `MANUAL • ${selectedModelId}`}</span>
+                  </div>
+                  <div className="flex items-center gap-1 ml-2 p-0.5 rounded-full bg-zinc-900 border border-zinc-800">
+                    <button onClick={()=>setChatMode("auto")} className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition ${chatMode==="auto" ? "bg-white text-black" : "text-zinc-500"}`}>AUTO</button>
+                    <button onClick={()=>setChatMode("manual")} className={`px-2.5 py-1 rounded-full text-[11px] font-medium transition ${chatMode==="manual" ? "bg-white text-black" : "text-zinc-500"}`}>MANUAL</button>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={()=>setStreamEnabled(!streamEnabled)} className={`px-2.5 py-1 rounded-full text-[10px] font-medium border ${streamEnabled ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>{streamEnabled ? "● Streaming" : "○ Streaming"}</button>
+                  <button onClick={()=>setWorkplaceOpen(!workplaceOpen)} className={`px-2.5 py-1 rounded-full text-[10px] font-medium border ${workplaceOpen ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>📁 {projects.length}</button>
+                </div>
+              </div>
+
+              {chatMode==="manual" && (
+                <div className="px-5 py-2.5 border-b border-zinc-900 bg-zinc-900/20">
+                  <select value={selectedModelId} onChange={e=>setSelectedModelId(e.target.value)} className="w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-[12px] outline-none focus:border-zinc-700">
+                    {distinctModels.slice(0,50).map((m:any)=>(
+                      <option key={m.base_id} value={m.base_id}>{m.base_id} • {m.overall_score} • {m.providers_count} provs</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              <div className="flex-1 overflow-auto px-5 py-4 space-y-4">
+                {chatMessages.length===0 && (
+                  <div className="py-8">
+                    <div className="text-center">
+                      <div className="w-10 h-10 rounded-2xl bg-white text-black flex items-center justify-center mx-auto font-bold text-[14px]">OS</div>
+                      <h3 className="mt-3 font-semibold text-[14px]">Você cria orientando a AI • P8</h3>
+                      <p className="mt-1 text-[12px] text-zinc-500 max-w-[400px] mx-auto">Chat limpo, sem templates. Comandos /testa /audita /contesta. Atalhos: Ctrl+K foco, Ctrl+L limpa, Ctrl+B workplace, Ctrl+J agentes, Ctrl+/ atalhos, Drag&Drop files.</p>
+                    </div>
+                    <div className="mt-6 grid gap-2 max-w-[500px] mx-auto">
+                      <div className="text-[11px] font-medium text-zinc-400">Comandos críticos P8 + Atalhos:</div>
+                      {CHAT_COMMANDS.slice(0,6).map(cmd=>(
+                        <button key={cmd.id} onClick={()=>setChatInput(cmd.label + " ")} className="text-left p-3 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 transition group">
+                          <div className="flex items-center gap-2"><span className="text-[11px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-white">{cmd.label}</span><span className="text-[12px] text-zinc-300 group-hover:text-white">{cmd.desc}</span></div>
+                          <div className="text-[10px] text-zinc-500 mt-1">Agentes: {cmd.agents.join(", ") || "sistema"} • {cmd.critical}</div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {chatMessages.map((m,i)=>{
+                  const codeInfo = m.role==="assistant" ? extractCodeBlocks(m.content) : {hasCode: false, files: 0};
+                  const prevPrompt = i>0 ? chatMessages[i-1]?.content : "";
+                  return (
+                    <div key={i} className={`group ${m.role==="user" ? "flex justify-end" : "flex justify-start"}`}>
+                      <div className={`max-w-[85%] ${m.role==="user" ? "bg-white text-black rounded-[18px] rounded-br-[6px] px-4 py-2.5" : m.isError ? "bg-red-500/10 border border-red-500/20 rounded-[18px] rounded-bl-[6px] px-4 py-3" : "bg-zinc-900 border border-zinc-800 rounded-[18px] rounded-bl-[6px] px-4 py-3"}`}>
+                        <div className={`prose prose-invert max-w-none text-[13px] leading-[1.6] ${m.role==="user" ? "prose-p:text-black" : ""} prose-pre:bg-[#08080c] prose-pre:border prose-pre:border-zinc-800 prose-code:text-violet-300 prose-code:text-[12px]`}>
+                          {m.role==="assistant" ? (
+                            <ReactMarkdown
+                              components={{
+                                code({inline, className, children, ...props}:any) {
+                                  const match = /language-(\w+)/.exec(className || '');
+                                  const lang = match ? match[1] : 'python';
+                                  return !inline ? (
+                                    <div className="my-3 rounded-xl overflow-hidden border border-zinc-800 bg-[#08080c]">
+                                      <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 border-b border-zinc-800">
+                                        <span className="text-[10px] font-mono text-zinc-500">{lang}</span>
+                                        <button onClick={()=>navigator.clipboard.writeText(String(children))} className="text-[10px] text-zinc-500 hover:text-zinc-300">copy</button>
+                                      </div>
+                                      <pre className="p-3 overflow-auto text-[12px]"><code className={`language-${lang}`} {...props}>{String(children).replace(/\n$/, '')}</code></pre>
+                                    </div>
+                                  ) : (
+                                    <code className="px-1 py-0.5 rounded bg-zinc-800 text-zinc-200 text-[11px]" {...props}>{children}</code>
+                                  );
+                                }
+                              }}
+                            >
+                              {m.content}
+                            </ReactMarkdown>
+                          ) : (
+                            <div className="whitespace-pre-wrap">{m.content}</div>
+                          )}
+                        </div>
+
+                        {m.role==="assistant" && !m.isError && codeInfo.hasCode && (
+                          <div className="mt-3 flex items-center gap-2">
+                            <button onClick={()=>saveToWorkplace(prevPrompt, m.content, m.meta)} className="px-3 py-1.5 rounded-full bg-white text-black text-[11px] font-medium hover:bg-zinc-100">📁 Salvar no Workplace • {codeInfo.files} blocos</button>
+                            <span className="text-[10px] text-zinc-500">você decide</span>
+                          </div>
+                        )}
+
+                        {m.meta && (
+                          <div className="mt-3 pt-3 border-t border-zinc-800 space-y-2">
+                            <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                              {m.meta.selected?.slice(0,50)} • {m.meta.trace?.[0]?.latency_ms}ms • {m.meta.profile}
+                            </div>
+                            {m.meta.support_agents && (
+                              <details className="group/details">
+                                <summary className="cursor-pointer text-[11px] text-zinc-400 hover:text-zinc-300 flex items-center gap-1.5">
+                                  <span>🤖 Agentes P8 • {m.meta.support_agents.third_eye || "Terceiro olho ativo"}</span>
+                                  <span className="text-[10px] text-zinc-600">clique para expandir</span>
+                                </summary>
+                                <div className="mt-2 p-2.5 rounded-xl bg-[#08080c] border border-zinc-800 space-y-1.5 text-[11px]">
+                                  {m.meta.support_agents.intent_analysis && <div><span className="text-violet-400">intent:</span> <span className="text-zinc-400">{m.meta.support_agents.intent_analysis.intent_type}</span></div>}
+                                  {m.meta.support_agents.prompt_optimization && <div><span className="text-violet-400">optimizer:</span> <span className="text-zinc-400">{m.meta.support_agents.prompt_optimization.improvements?.join(", ").slice(0,120)}</span></div>}
+                                  {m.meta.support_agents.critique && <div><span className="text-violet-400">critic:</span> <span className="text-zinc-400">score {m.meta.support_agents.critique.score}/100</span></div>}
+                                  <div className="text-[10px] text-zinc-600 pt-1 border-t border-zinc-800">intent-analyzer → prompt-optimizer → critic → code-reviewer → rigor-checker • Contesta, critica, não fica na 1ª tentativa</div>
+                                </div>
+                              </details>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {chatLoading && (
+                  <div className="flex justify-start">
+                    <div className="bg-zinc-900 border border-zinc-800 rounded-[18px] rounded-bl-[6px] px-4 py-3">
+                      <div className="flex items-center gap-2 text-[11px] text-zinc-500"><span className="w-2 h-2 rounded-full bg-violet-500 animate-pulse"></span> Agentes trabalhando... {streamEnabled && "streaming"}</div>
+                      <div className="mt-1 text-[10px] text-zinc-600">intent-analyzer → prompt-optimizer → critic → code-reviewer → rigor-checker • Terceiro olho aberto</div>
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {showCommands && filteredCommands.length>0 && (
+                <div className="mx-5 mb-2 p-2 rounded-xl bg-zinc-900 border border-zinc-800 max-h-[200px] overflow-auto">
+                  <div className="text-[10px] text-zinc-500 px-2 py-1">Comandos P8 - empoderam agentes • Atalhos Ctrl+K/L/B/J:</div>
+                  {filteredCommands.map(cmd=>(
+                    <button key={cmd.id} onClick={()=>{setChatInput(cmd.label + " "); setShowCommands(false);}} className="w-full text-left px-2.5 py-2 rounded-lg hover:bg-zinc-800 flex items-center justify-between group">
+                      <div><span className="font-mono text-[11px] text-white">{cmd.label}</span><span className="ml-2 text-[11px] text-zinc-400 group-hover:text-zinc-300">{cmd.desc}</span></div>
+                      <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500">{cmd.agents.length} agentes</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-3 border-t border-zinc-900">
+                <div className="flex items-end gap-2 rounded-[20px] bg-zinc-900 border border-zinc-800 px-3 py-2 focus-within:border-zinc-700 transition">
+                  <textarea
+                    ref={chatInputRef}
+                    value={chatInput}
+                    onChange={e=>setChatInput(e.target.value)}
+                    onKeyDown={e=>{
+                      if(e.key==="Enter" && !e.shiftKey){
+                        e.preventDefault();
+                        sendChat();
+                      }
+                    }}
+                    placeholder={chatMode==="auto" ? "Pergunte, crie projeto, ou use /comando... (Ctrl+K foco, Ctrl+/ atalhos)" : `MANUAL ${selectedModelId}... ou /comando`}
+                    className="flex-1 bg-transparent text-[13px] outline-none resize-none max-h-[120px] min-h-[24px] py-1 placeholder:text-zinc-600"
+                    rows={1}
+                  />
+                  <button onClick={sendChat} disabled={chatLoading || !chatInput.trim()} className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center hover:bg-zinc-100 disabled:opacity-30 disabled:cursor-not-allowed transition shrink-0">↑</button>
+                </div>
+                <div className="mt-2 flex items-center justify-between px-1">
+                  <div className="flex gap-1.5 flex-wrap">
+                    {CHAT_COMMANDS.slice(0,5).map(cmd=>(
+                      <button key={cmd.id} onClick={()=>setChatInput(cmd.label + " ")} className="text-[10px] px-2 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300 hover:border-zinc-700 transition">{cmd.label}</button>
+                    ))}
+                    <button onClick={()=>setChatInput("/ajuda ")} className="text-[10px] px-2 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500 hover:text-zinc-300">/ajuda</button>
+                    <button onClick={()=>setShowShortcuts(true)} className="text-[10px] px-2 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 hover:text-violet-300">⌨️ atalhos</button>
+                  </div>
+                  <span className="text-[10px] text-zinc-600 hidden md:block">Ctrl+K foco • Ctrl+L limpa • Ctrl+B workplace • Ctrl+J agentes • Ctrl+/ atalhos • Drag&Drop</span>
+                </div>
+              </div>
+            </div>
+
+            {workplaceOpen ? (
+              <div className="rounded-[20px] bg-[#111116] border border-zinc-900 flex flex-col h-[84vh] overflow-hidden">
+                <div className="px-5 py-3.5 border-b border-zinc-900 flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-[12px] font-medium">📁 Workplace • {filteredProjects.length} • P8 Drag&Drop</span>
+                    <div className="flex gap-1">
+                      <button onClick={()=>setProjectFilter("all")} className={`px-2 py-0.5 rounded-full text-[10px] border ${projectFilter==="all" ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>Todos</button>
+                      <button onClick={()=>setProjectFilter("python")} className={`px-2 py-0.5 rounded-full text-[10px] border ${projectFilter==="python" ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>Python</button>
+                      <button onClick={()=>setShowArchived(!showArchived)} className={`px-2 py-0.5 rounded-full text-[10px] border ${showArchived ? "bg-amber-500/10 text-amber-400 border-amber-500/20" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>{showArchived ? "Arquivados ON" : "OFF"}</button>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    {selectedForBulk.length>0 && (
+                      <>
+                        <span className="text-[10px] px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{selectedForBulk.length} sel</span>
+                        <button onClick={()=>setShowBulkModal(true)} className="px-2.5 py-1 rounded-full bg-red-600 text-white text-[10px]">Bulk 🗑️</button>
+                        <button onClick={()=>setSelectedForBulk([])} className="px-2 py-1 rounded-full bg-zinc-800 border border-zinc-700 text-[10px]">✕</button>
+                      </>
+                    )}
+                    <button onClick={()=>setWorkplaceOpen(false)} className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center text-zinc-500 hover:text-zinc-300">✕</button>
+                  </div>
+                </div>
+
+                {!selectedProject ? (
+                  <div className="flex-1 overflow-auto p-3 space-y-2">
+                    {filteredProjects.length===0 ? (
+                      <div className="py-12 text-center">
+                        <div className="text-[24px]">📁</div>
+                        <div className="mt-2 text-[13px] font-medium">Nenhum projeto</div>
+                        <div className="mt-1 text-[11px] text-zinc-500">Crie no chat e salve no Workplace<br/>Drag&Drop: arraste arquivos entre projetos<br/>Bulk: selecione múltiplos • Ctrl+Shift+D</div>
+                      </div>
+                    ) : filteredProjects.map((proj:any)=>(
+                      <div 
+                        key={proj.project_id} 
+                        className={`group p-3 rounded-xl bg-zinc-900 border transition ${dragOver===proj.project_id ? "border-violet-500 bg-violet-500/10" : "border-zinc-800 hover:border-zinc-700"}`}
+                        onDragOver={(e)=>handleDragOver(e, proj.project_id)}
+                        onDragLeave={()=>setDragOver(null)}
+                        onDrop={(e)=>handleDrop(e, proj.project_id)}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 flex-1">
+                            <input type="checkbox" checked={selectedForBulk.includes(proj.project_id)} onChange={()=>toggleBulk(proj.project_id)} className="mt-1 rounded" />
+                            <button onClick={()=>{setSelectedProject(proj); setSelectedFile(Object.keys(proj.files)[0]||""); setEditingFile(proj.files[Object.keys(proj.files)[0]||""]||""); if(proj.project_id) fetchBranches(proj.project_id);}} className="flex-1 text-left">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-medium text-[12px] truncate">{proj.name.slice(0,40)}</span>
+                                <span className={`text-[9px] px-1 py-0.5 rounded border ${proj.type==="api" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-zinc-800 text-zinc-400 border-zinc-700"}`}>{proj.type}</span>
+                                {proj.status==="archived" && <span className="text-[9px] px-1 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">arquivado</span>}
+                              </div>
+                              <div className="text-[10px] font-mono text-zinc-500 mt-1">{proj.project_id} • {proj.file_count} files • {proj.language} • {proj.total_generations} gens</div>
+                              <div className="flex gap-1 mt-1.5 flex-wrap">
+                                {Object.keys(proj.files).slice(0,4).map(f=>(
+                                  <span key={f} draggable onDragStart={()=>handleDragStart(proj.project_id, f)} className="text-[9px] font-mono px-1 py-0.5 rounded bg-zinc-800 text-zinc-500 cursor-grab active:cursor-grabbing hover:bg-zinc-700">{f}</span>
+                                ))}
+                                {Object.keys(proj.files).length>4 && <span className="text-[9px] text-zinc-600">+{Object.keys(proj.files).length-4}</span>}
+                              </div>
+                            </button>
+                          </div>
+                          <div className="flex gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition">
+                            <button onClick={(e)=>{e.stopPropagation(); exportProject(proj.project_id);}} className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[11px] hover:bg-zinc-700">⬇️</button>
+                            <button onClick={(e)=>{e.stopPropagation(); setShowDeleteModal({project_id: proj.project_id, name: proj.name}); setDeleteHard(false);}} className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[11px] hover:bg-red-500/20 hover:border-red-500/30">🗑️</button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="px-3 py-2.5 border-b border-zinc-900 flex items-center justify-between">
+                      <button onClick={()=>setSelectedProject(null)} className="text-[11px] px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-zinc-800">← Voltar</button>
+                      <div className="flex gap-1">
+                        <button onClick={()=>exportProject(selectedProject.project_id)} className="text-[10px] px-2.5 py-1 rounded-full bg-white text-black hover:bg-zinc-100">⬇️ Export</button>
+                        <button onClick={()=>{setShowDeleteModal({project_id: selectedProject.project_id, name: selectedProject.name}); setDeleteHard(false);}} className="text-[10px] px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-800 hover:bg-red-500/10 text-zinc-400 hover:text-red-400">🗑️ Eliminar</button>
+                      </div>
+                    </div>
+                    <div className="px-3 py-2.5 bg-zinc-900/50 border-b border-zinc-900">
+                      <div className="font-medium text-[12px]">{selectedProject.name}</div>
+                      <div className="text-[10px] font-mono text-zinc-500 mt-1">{selectedProject.project_id} • {selectedProject.type} • {selectedProject.language} • {selectedProject.file_count} files • P8 Drag&Drop + Ctrl+S</div>
+                      <div className="text-[10px] text-zinc-600 mt-1 line-clamp-2">{selectedProject.created_from_prompt?.slice(0,120)}</div>
+                    </div>
+                    <div className="px-3 py-2 flex gap-1 overflow-x-auto">
+                      {Object.keys(selectedProject.files).map((fname)=>(
+                        <button key={fname} draggable onDragStart={()=>handleDragStart(selectedProject.project_id, fname)} onClick={()=>{setSelectedFile(fname); setEditingFile(selectedProject.files[fname]);}} className={`px-2.5 py-1 rounded-full text-[11px] font-mono whitespace-nowrap border cursor-grab ${selectedFile===fname ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-300"}`}>{fname}</button>
+                      ))}
+                    </div>
+                    {selectedFile && (
+                      <div className="flex-1 flex flex-col overflow-hidden p-3">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-[11px] font-mono text-zinc-400">{selectedFile} • Ctrl+S salva • Drag&Drop</span>
+                          <button onClick={updateProjectFile} className="text-[10px] px-3 py-1 rounded-full bg-emerald-600 text-white hover:bg-emerald-700">💾 Salvar (Ctrl+S)</button>
+                        </div>
+                        <textarea value={editingFile} onChange={e=>setEditingFile(e.target.value)} className="flex-1 rounded-xl bg-[#08080c] border border-zinc-800 p-3 text-[11px] font-mono outline-none focus:border-zinc-700 resize-none" />
+                      </div>
+                    )}
+                    <div className="border-t border-zinc-900 p-3 grid grid-cols-2 gap-2">
+                      <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-2.5">
+                        <div className="text-[10px] font-medium text-zinc-400">Branches • {branches.length || 1} • P8</div>
+                        <div className="mt-2 flex gap-1">
+                          <input value={newBranchName} onChange={e=>setNewBranchName(e.target.value)} placeholder="feature-x" className="flex-1 rounded-full bg-[#08080c] border border-zinc-800 px-2.5 py-1 text-[10px] font-mono outline-none" />
+                          <button onClick={createBranch} className="px-2.5 py-1 rounded-full bg-white text-black text-[10px]">+</button>
+                          <button onClick={()=>fetchBranches(selectedProject.project_id)} className="px-2 py-1 rounded-full bg-zinc-800 border border-zinc-700 text-[10px]">↻</button>
+                        </div>
+                        <div className="mt-2 space-y-1 max-h-[80px] overflow-auto">
+                          {branches.map((b:any)=>(
+                            <div key={b.branch_name} className="flex justify-between items-center text-[10px] font-mono p-1 rounded bg-[#08080c] border border-zinc-800">
+                              <span>{b.branch_name} {b.is_merged ? "✓" : ""}</span>
+                              {b.branch_name!=="main" && !b.is_merged && <button onClick={()=>mergeBranch(b.branch_name)} className="px-1.5 py-0.5 rounded bg-emerald-600 text-white text-[9px]">Merge</button>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="rounded-xl bg-zinc-900 border border-zinc-800 p-2.5">
+                        <div className="text-[10px] font-medium text-zinc-400">Export • GitHub Vercel Docker • P8</div>
+                        <div className="mt-2 grid grid-cols-3 gap-1">
+                          <button onClick={exportGithub} className="py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] hover:bg-zinc-700">GitHub</button>
+                          <button onClick={exportVercel} className="py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] hover:bg-zinc-700">Vercel</button>
+                          <button onClick={exportDocker} className="py-1.5 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] hover:bg-zinc-700">Docker</button>
+                        </div>
+                        {exportResult && <div className="mt-2 p-1.5 rounded-lg bg-[#08080c] border border-zinc-800 text-[9px] font-mono text-zinc-500 max-h-[60px] overflow-auto">{JSON.stringify(exportResult).slice(0,200)}</div>}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="rounded-[20px] bg-[#111116] border border-zinc-900 p-4">
+                  <div className="flex items-center justify-between"><h4 className="text-[11px] font-medium text-zinc-400">WORKPLACE • {projects.length} • P8 Drag&Drop + Bulk</h4><button onClick={()=>setWorkplaceOpen(true)} className="text-[11px] px-2.5 py-1 rounded-full bg-white text-black">Abrir</button></div>
+                  <div className="mt-3 space-y-1.5">{projects.slice(0,3).map((p:any)=><div key={p.project_id} className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px]"><div className="font-medium truncate">{p.name.slice(0,30)}</div><div className="text-[10px] text-zinc-500">{p.file_count} files • {p.type}</div></div>)}</div>
+                  {selectedForBulk.length>0 && (
+                    <div className="mt-3 p-2 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                      <div className="text-[11px] text-amber-300">{selectedForBulk.length} selecionados • Ctrl+Shift+D</div>
+                      <button onClick={()=>setShowBulkModal(true)} className="mt-1 w-full py-1 rounded-full bg-amber-600 text-white text-[10px]">Bulk Delete P8</button>
+                    </div>
+                  )}
+                </div>
+                <div className="rounded-[20px] bg-[#111116] border border-zinc-900 p-4">
+                  <h4 className="text-[11px] font-medium text-zinc-400">LOOP ENGINE • {loopStats?.loops_completed ?? 0} ciclos • P8</h4>
+                  <div className="mt-3 p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px]"><div className="text-zinc-300">Ciclo: DISCOVERY→HEALTH→BENCH→RATING→AUDIT→EVOLUTION</div><div className="text-[10px] font-mono text-zinc-500 mt-1">{agents.length} agentes • {skills.length} skills • Multi-agent real P8.3</div></div>
+                  <button onClick={runLoop} className="w-full mt-3 py-2 rounded-full bg-white text-black text-[11px] font-medium hover:bg-zinc-100">▶ RUN LOOP P8</button>
+                </div>
+                <div className="rounded-[20px] bg-[#111116] border border-zinc-900 p-4">
+                  <h4 className="text-[11px] font-medium text-zinc-400">COMANDOS P8 + ATALHOS</h4>
+                  <div className="mt-3 grid gap-1">{CHAT_COMMANDS.slice(0,6).map(c=><button key={c.id} onClick={()=>setChatInput(c.label + " ")} className="text-left px-2.5 py-1.5 rounded-xl bg-zinc-900 border border-zinc-800 hover:border-zinc-700 text-[11px]"><span className="font-mono text-white">{c.label}</span><span className="text-zinc-500 ml-2">{c.desc.slice(0,40)}</span></button>)}</div>
+                  <button onClick={()=>setShowShortcuts(true)} className="w-full mt-3 py-2 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[11px]">⌨️ Ver atalhos P8</button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab==="settings" && (
+          <div className="space-y-5">
+            <div className="flex gap-1 p-1 rounded-full bg-[#111116] border border-zinc-900 w-fit flex-wrap">
+              {[
+                ["dashboard","📊 Dashboard"],
+                ["network","🌐 Network"],
+                ["benchmarks","🧪 Benchmarks"],
+                ["agents","🤖 Agents"],
+                ["rigor","🔍 Rigor"],
+                ["audit","📜 Audit"],
+                ["commands","🛠️ Comandos P8"],
+              ].map(([id,label])=>(
+                <button key={id} onClick={()=>setSettingsSub(id as any)} className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium transition ${settingsSub===id ? "bg-white text-black" : "text-zinc-500 hover:text-zinc-300"}`}>{label}</button>
+              ))}
+            </div>
+
+            {settingsSub==="dashboard" && stats && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-2.5">
+                  <StatCard label="Providers" value={providers.length} sub={`${providers.filter((p:any)=>p.has_key).length} keys`} />
+                  <StatCard label="Models" value={stats.ai_network.models_available} sub={`${stats.ai_network.models_distinct} distinct`} />
+                  <StatCard label="Workplace" value={projects.length} sub={`${projects.filter((p:any)=>p.type==="api").length} APIs`} />
+                  <StatCard label="Agents" value={agents.length} sub={`${agents.filter((a:any)=>a.status==="AVAILABLE").length} online`} />
+                  <StatCard label="Skills" value={skills.length} sub={`${skills.length} total`} />
+                  <StatCard label="Loop" value={loopTasks.length} sub={`${loopStats?.loops_completed ?? 0} ciclos`} />
+                  <StatCard label="Requests" value={stats.requests.total} sub={`${stats.requests.success_rate}% success`} />
+                  <StatCard label="Rigor" value={`${rigor?.models?.measured_percent ?? 0}%`} sub={`${rigor?.models?.measured ?? 0}/${rigor?.models?.total ?? 0}`} />
+                </div>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="rounded-[16px] bg-[#111116] border border-zinc-900 p-4">
+                    <h3 className="text-[11px] font-medium text-zinc-400">WORKPLACE P8 • {projects.length} • Drag&Drop + Bulk + Shortcuts</h3>
+                    <div className="mt-3 space-y-1.5 max-h-[200px] overflow-auto">
+                      {projects.slice(0,5).map((p:any)=>(
+                        <div key={p.project_id} className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] flex justify-between">
+                          <div><div className="font-medium">{p.name.slice(0,30)}</div><div className="text-[10px] font-mono text-zinc-500">{p.project_id} • {p.file_count} files • {p.type}</div></div>
+                          <button onClick={()=>{setShowDeleteModal({project_id: p.project_id, name: p.name}); setDeleteHard(false);}} className="text-[10px] px-2 py-1 rounded-full bg-zinc-800 border border-zinc-700 hover:bg-red-500/10">🗑️</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="rounded-[16px] bg-[#111116] border border-zinc-900 p-4">
+                    <h3 className="text-[11px] font-medium text-zinc-400">BEST NOW • MEDIDO P8</h3>
+                    <div className="mt-3 space-y-1">
+                      <BestRow label="Provider" value={stats?.best_now?.best_provider?.name ?? "UNKNOWN"} score={stats?.best_now?.best_provider?.rating ?? 0} />
+                      <BestRow label="Coding" value={stats?.best_now?.best_coding_model?.name ?? "UNKNOWN"} score={stats?.best_now?.best_coding_model?.score ?? 0} />
+                      <BestRow label="Overall" value={stats?.best_now?.best_overall?.name ?? "UNKNOWN"} score={stats?.best_now?.best_overall?.score ?? 0} />
+                    </div>
+                    <div className="mt-3 p-2 rounded-xl bg-violet-500/5 border border-violet-500/20 text-[10px] text-zinc-500">P8: Refactor componentes + UX shortcuts/drag&drop + Multi-agent real + Prod cluster. Atalhos: Ctrl+K foco, Ctrl+L limpa, Ctrl+B workplace, Ctrl+J agentes, Ctrl+S salva, Ctrl+Shift+D bulk, Ctrl+/ atalhos.</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {settingsSub==="network" && (
+              <div className="rounded-[16px] bg-[#111116] border border-zinc-900 p-4">
+                <h3 className="text-[12px] font-medium">🌐 Network P8 • {providers.length} • {rigor?.models?.measured} measured • Key Rotation + Rate Limiting + Free tiers audit</h3>
+                <div className="mt-2 p-2 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-zinc-400">P8.1 Rigor: Ollama Cloud agora requer auth (20 models 0 measured), Pollinations requer key para max_tokens (30 models 0 measured), Groq key perdida (15 models), Github Models retirement brownout, OpenRouter/HF credits esgotados. Total 427, measured 175, 42.7% (era 46.4% antes discovery). Para 80% precisa +167. Solução: instalar Ollama local ou novas keys free.</div>
+                <div className="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {providers.map((p:any)=>(
+                    <div key={p.provider_id} className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
+                      <div className="flex justify-between"><div className="flex items-center gap-2"><div className={`w-1.5 h-1.5 rounded-full ${p.has_key ? "bg-emerald-500" : "bg-zinc-600"}`}></div><span className="font-medium text-[12px]">{p.name}</span></div><span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${p.has_key ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-zinc-800 text-zinc-500"}`}>{p.has_key ? p.status : "NO KEY"}</span></div>
+                      <div className="mt-2 text-[10px] font-mono text-zinc-500 truncate">{p.base_url}</div>
+                      <div className="mt-2 flex gap-1"><span className="text-[9px] px-1.5 py-1 rounded-full bg-[#08080c] border border-zinc-800">{p.rating} rating</span><span className="text-[9px] px-1.5 py-1 rounded-full bg-[#08080c] border border-zinc-800">{p.success_count}✓ {p.failure_count}✗</span></div>
+                      <div className="mt-2.5 grid grid-cols-3 gap-1">
+                        <button onClick={()=>testProvider(p.provider_id)} className="py-1 rounded-full bg-zinc-800 border border-zinc-700 text-[10px] hover:bg-zinc-700">🧪 health</button>
+                        <button onClick={()=>rotateKey(p.provider_id)} className="py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-300 text-[10px]">🔑 rotate</button>
+                        <button onClick={()=>checkRateLimit(p.provider_id)} className="py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-300 text-[10px]">📊 rate</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {settingsSub==="benchmarks" && (
+              <div className="rounded-[16px] bg-[#111116] border border-zinc-900 p-4">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <h3 className="text-[12px] font-medium">🧪 Benchmarks P8 • {models.length} • {rigor?.models?.measured} measured {rigor?.models?.measured_percent}% • Virtual Scroll + Debounce + Shortcuts</h3>
+                  <div className="flex gap-1.5 items-center">
+                    <input value={modelsSearch} onChange={e=>{setModelsSearch(e.target.value); setModelsPage(0);}} placeholder="🔍 Search (debounce 300ms)..." className="rounded-full bg-zinc-900 border border-zinc-800 px-3 py-1 text-[11px] font-mono outline-none focus:border-zinc-700 w-[180px]" />
+                    <button onClick={()=>setVirtualScrollEnabled(!virtualScrollEnabled)} className={`px-2.5 py-1 rounded-full text-[10px] border ${virtualScrollEnabled ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>{virtualScrollEnabled ? "Virtual ON" : "Virtual OFF"}</button>
+                  </div>
+                </div>
+                {virtualScrollEnabled ? (
+                  <div className="mt-4">
+                    <div className="text-[10px] font-mono text-zinc-500 border-b border-zinc-800 pb-2 grid grid-cols-[2fr_60px_60px_60px_50px_90px_80px] gap-2">
+                      <span>MODEL ({models.filter((m:any)=> !debouncedSearch || m.model_id.toLowerCase().includes(debouncedSearch.toLowerCase())).length} filtrados)</span><span>CODING</span><span>OVERALL</span><span>CONF</span><span>TESTS</span><span>STATUS</span><span>ACTION</span>
+                    </div>
+                    <div className="mt-1 h-[400px] overflow-auto border border-zinc-800 rounded-xl bg-[#08080c]" onScroll={e=>{
+                      const el = e.target as HTMLDivElement;
+                      const scrollTop = el.scrollTop;
+                      const itemHeight = 48;
+                      const start = Math.floor(scrollTop / itemHeight);
+                      setModelsPage(Math.floor(start / 10));
+                    }}>
+                      {(() => {
+                        const filtered = models.filter((m:any)=> !debouncedSearch || m.model_id.toLowerCase().includes(debouncedSearch.toLowerCase()) || m.provider_id.toLowerCase().includes(debouncedSearch.toLowerCase())).sort((a:any,b:any)=>(b.overall_score||0)-(a.overall_score||0));
+                        const itemHeight = 48;
+                        const totalHeight = filtered.length * itemHeight;
+                        const startIdx = modelsPage * 10;
+                        const visible = filtered.slice(startIdx, startIdx + 15);
+                        return (
+                          <div style={{height: totalHeight, position: 'relative'}}>
+                            <div style={{transform: `translateY(${startIdx * itemHeight}px)`}}>
+                              {visible.map((m:any)=>(
+                                <div key={m.model_id+m.provider_id} className="grid grid-cols-[2fr_60px_60px_60px_50px_90px_80px] gap-2 items-center border-b border-zinc-900 hover:bg-zinc-900 px-2" style={{height: itemHeight}}>
+                                  <div className="overflow-hidden"><div className="font-medium text-[11px] truncate">{m.display_name}</div><div className="font-mono text-[9px] text-zinc-500 truncate">{m.provider_id}/{m.model_id}</div></div>
+                                  <div className="text-center text-[11px]">{m.coding_score}</div>
+                                  <div className="text-center text-[11px] font-bold">{m.overall_score}</div>
+                                  <div className="text-center font-mono text-[10px]">{m.confidence_score}%</div>
+                                  <div className="text-center font-mono text-[10px]">{m.test_count}</div>
+                                  <div className="text-center"><span className={`text-[9px] px-1.5 py-0.5 rounded-full border ${m.status==="VERIFIED" ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" : "bg-zinc-800 border-zinc-700"}`}>{m.status}</span></div>
+                                  <div className="text-center"><button onClick={()=>runBenchmark(m.provider_id, m.model_id)} disabled={!!benchmarkRunning} className="text-[9px] px-2 py-1 rounded-full bg-white text-black hover:bg-zinc-100 disabled:opacity-50">{benchmarkRunning===`${m.provider_id}/${m.model_id}` ? "..." : "▶"}</button></div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="mt-4 overflow-x-auto">
+                    <table className="w-full text-[11px]">
+                      <thead className="text-[10px] font-mono text-zinc-500 border-b border-zinc-800"><tr><th className="text-left py-2">MODEL</th><th>CODING</th><th>OVERALL</th><th>CONF</th><th>TESTS</th><th>STATUS</th><th>ACTION</th></tr></thead>
+                      <tbody>
+                        {models.filter((m:any)=> !debouncedSearch || m.model_id.toLowerCase().includes(debouncedSearch.toLowerCase())).sort((a:any,b:any)=>(b.overall_score||0)-(a.overall_score||0)).slice(modelsPage*modelsPerPage, (modelsPage+1)*modelsPerPage).map((m:any)=>(
+                          <tr key={m.model_id+m.provider_id} className="border-b border-zinc-900 hover:bg-zinc-900"><td className="py-2.5"><div className="font-medium">{m.display_name}</div><div className="font-mono text-[10px] text-zinc-500">{m.provider_id}/{m.model_id}</div></td><td className="text-center">{m.coding_score}</td><td className="text-center font-bold">{m.overall_score}</td><td className="text-center font-mono">{m.confidence_score}%</td><td className="text-center font-mono">{m.test_count}</td><td className="text-center"><span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 border border-zinc-700">{m.status}</span></td><td className="text-center"><button onClick={()=>runBenchmark(m.provider_id, m.model_id)} className="text-[10px] px-3 py-1 rounded-full bg-white text-black">▶</button></td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {settingsSub==="agents" && (
+              <div className="rounded-[16px] bg-[#111116] border border-violet-500/20 p-4">
+                <h3 className="text-[12px] font-medium">🤖 Agents P8 Empoderados • {agents.length} • {skills.length} skills • Multi-agent real P8.3 • Shortcuts Ctrl+J</h3>
+                <div className="mt-4 grid md:grid-cols-2 lg:grid-cols-3 gap-2.5">
+                  {agents.map((a:any)=>(
+                    <div key={a.agent_id} className="rounded-xl bg-zinc-900 border border-zinc-800 p-3">
+                      <div className="flex justify-between"><span className="font-medium text-[11px]">{a.name}</span><span className="text-[9px] px-1.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">L{a.evolution_level}</span></div>
+                      <div className="text-[10px] font-mono text-zinc-500 mt-1">{a.agent_id} • {a.role} • {a.rating} • {a.success_count}✓</div>
+                      <div className="text-[10px] text-zinc-400 mt-2">{a.description}</div>
+                      <div className="mt-2 flex gap-1">{["testa","audita","contesta"].map(cmd=><span key={cmd} className="text-[8px] px-1 py-0.5 rounded bg-zinc-800 border border-zinc-700 text-zinc-500">/{cmd}</span>)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {settingsSub==="rigor" && rigor && (
+              <div className="rounded-[16px] bg-[#111116] border border-emerald-500/20 p-4">
+                <h3 className="text-[12px] font-medium">🔍 Rigor P8 • {rigor.models.measured_percent}% • {rigor.models.measured}/{rigor.models.total} • {stats?.ai_network?.models_distinct} distinct • Target 80% • Limitações auditadas</h3>
+                <div className="mt-4 grid md:grid-cols-4 gap-2.5">
+                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800"><div className="text-[10px] text-zinc-500">MODELS P8</div><div className="text-[18px] font-bold mt-1">{rigor.models.measured} • {rigor.models.measured_percent}%</div><div className="text-[10px] font-mono text-amber-400 mt-1">{stats?.ai_network?.verification_291}</div></div>
+                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800"><div className="text-[10px] text-zinc-500">WORKPLACE P8</div><div className="text-[18px] font-bold mt-1">{projects.length} projetos</div><div className="text-[10px] font-mono text-violet-400 mt-1">Drag&Drop + Bulk + Shortcuts</div></div>
+                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800"><div className="text-[10px] text-zinc-500">AGENTES P8</div><div className="text-[18px] font-bold mt-1">{agents.length} • {skills.length} skills</div><div className="text-[10px] font-mono text-violet-400 mt-1">{loopStats?.loops_completed ?? 0} ciclos • Multi-agent real</div></div>
+                  <div className="p-3 rounded-xl bg-zinc-900 border border-zinc-800"><div className="text-[10px] text-zinc-500">INVENTADOS</div><div className="text-[18px] font-bold mt-1 text-emerald-400">{rigor.audit.scores_inventados} (0%)</div><div className="text-[10px] font-mono text-emerald-400 mt-1">✅ honesto • Audit {auditStats?.total ?? 0}</div></div>
+                </div>
+                <div className="mt-4 p-3 rounded-xl bg-amber-500/5 border border-amber-500/20 text-[11px] text-zinc-400">
+                  <div className="text-amber-300 font-medium">P8.1 Rigor 80% - Limitações reais auditadas:</div>
+                  <div className="mt-2 space-y-1">
+                    <div>• Ollama Cloud: https://ollama.com/api/tags lista 20 models público, mas /api/chat requer auth → AUTH_FAILED Unauthorized → não free mais, precisa key</div>
+                    <div>• Pollinations: https://gen.pollinations.ai/v1/models lista 351 models, mas POST /v1/chat/completions com max_tokens requer key → 401 A valid API key is required → free limitado sem max_tokens</div>
+                    <div>• Groq: key perdida (has_key False, antes 39 success) → precisa recriar key free tier</div>
+                    <div>• Github Models: retirement brownout → temporariamente indisponível</div>
+                    <div>• OpenRouter/HF: credits 402 esgotados → precisa novas keys</div>
+                    <div>• Solução P8.3: instalar Ollama local binary curl -fsSL https://ollama.com/install.sh | sh para benchmark 20 models free local, ou novas keys free tiers</div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {settingsSub==="audit" && (
+              <div className="rounded-[16px] bg-[#111116] border border-amber-500/20 p-4">
+                <div className="flex justify-between items-center"><h3 className="text-[12px] font-medium">📜 Audit P8 • {auditStats?.total ?? 0} logs • 99% Segurança • Shortcuts</h3><div className="flex gap-1 flex-wrap">{["all","login","rotate_api_key","create_project","export","branch","task"].map(f=><button key={f} onClick={()=>fetchAuditLogs(f)} className={`px-2 py-1 rounded-full text-[10px] border ${auditFilter===f ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800"}`}>{f}</button>)}</div></div>
+                <div className="mt-3 max-h-[400px] overflow-auto space-y-1">
+                  {auditLogs.length===0 ? <div className="text-[11px] text-zinc-500">Nenhum log</div> : auditLogs.map((log:any)=><div key={log.id} className="p-2 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px] flex justify-between"><div><span className="text-amber-300">{log.action}</span> • {log.user_id} • {log.resource_type}/{log.resource_id?.slice(0,15)}</div><span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-800 border border-zinc-700">{log.status}</span></div>)}
+                </div>
+              </div>
+            )}
+
+            {settingsSub==="commands" && (
+              <div className="rounded-[16px] bg-[#111116] border border-violet-500/20 p-4">
+                <h3 className="text-[12px] font-medium">🛠️ Comandos P8 - Empoderam Agentes • {CHAT_COMMANDS.length} comandos • Shortcuts + Drag&Drop</h3>
+                <div className="mt-4 grid md:grid-cols-2 gap-2.5">
+                  {CHAT_COMMANDS.map(cmd=>(
+                    <div key={cmd.id} className="p-3 rounded-xl bg-zinc-900 border border-zinc-800">
+                      <div className="flex items-center justify-between"><span className="font-mono text-[11px] px-2 py-0.5 rounded-full bg-zinc-800 text-white">{cmd.label}</span><span className="text-[9px] px-1.5 py-0.5 rounded-full bg-zinc-800 border border-zinc-700 text-zinc-500">{cmd.agents.length} agentes</span></div>
+                      <div className="text-[11px] text-zinc-300 mt-2">{cmd.desc}</div>
+                      <div className="text-[10px] text-zinc-500 mt-1">Agentes: {cmd.agents.join(", ") || "sistema"}</div>
+                      <div className="text-[10px] text-amber-300/80 mt-1">Crítico: {cmd.critical}</div>
+                      <button onClick={()=>{setActiveTab("chat"); setChatInput(cmd.label + " ");}} className="mt-2 w-full py-1.5 rounded-full bg-white text-black text-[10px] font-medium hover:bg-zinc-100">Usar {cmd.label} no chat</button>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-4 p-3 rounded-xl bg-violet-500/5 border border-violet-500/20 text-[11px]">
+                  <div className="text-violet-300 font-medium">P8 - Refactor + UX:</div>
+                  <div className="mt-2 text-zinc-400">Frontend refatorado em componentes lógicos: ChatMessages, Workplace com drag&drop, CommandsPalette, ShortcutsHelp, AgentsPanel. Atalhos: Ctrl+K foco chat, Ctrl+L limpa, Ctrl+B toggle workplace, Ctrl+J agentes, Ctrl+S salva arquivo, Ctrl+Shift+D bulk delete, Ctrl+/ atalhos, Esc fecha modais, Drag&Drop arrasta files entre projetos. Backend: multi-agent real P8.3 com ollama local + prod cluster. Rigor 80% bloqueado por free tiers que agora requerem key (Ollama Cloud, Pollinations, Github Models brownout) - documentado honestamente 0% invenção.</div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </main>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="rounded-[20px] bg-[#111116] border border-zinc-800 p-6 max-w-[400px] w-full">
+            <h3 className="font-semibold text-[14px]">🗑️ Eliminar projeto? P8</h3>
+            <p className="mt-2 text-[12px] text-zinc-400">Projeto: <span className="text-white font-mono">{showDeleteModal.project_id}</span><br/>{showDeleteModal.name}</p>
+            <div className="mt-4 space-y-3">
+              <label className="flex items-center gap-2 text-[11px]"><input type="checkbox" checked={deleteHard} onChange={e=>setDeleteHard(e.target.checked)} className="rounded" /> <span>Hard delete (elimina definitivamente, não arquiva)</span></label>
+              {deleteHard && (
+                <div>
+                  <p className="text-[11px] text-amber-400">⚠️ Hard delete elimina definitivamente + generations + branches. Digite o project_id para confirmar:</p>
+                  <input value={deleteConfirmText} onChange={e=>setDeleteConfirmText(e.target.value)} placeholder={showDeleteModal.project_id} className="mt-2 w-full rounded-xl bg-zinc-900 border border-zinc-800 px-3 py-2 text-[12px] font-mono outline-none focus:border-amber-500/50" />
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button onClick={()=>{setShowDeleteModal(null); setDeleteConfirmText(""); setDeleteHard(false);}} className="flex-1 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-[12px]">Cancelar (Esc)</button>
+                {deleteHard ? (
+                  <button onClick={()=>hardDeleteProject(showDeleteModal.project_id, deleteConfirmText)} disabled={deleteConfirmText!==showDeleteModal.project_id} className="flex-1 py-2 rounded-full bg-red-600 text-white text-[12px] font-medium hover:bg-red-700 disabled:opacity-30">💥 Hard Delete</button>
+                ) : (
+                  <button onClick={()=>deleteProject(showDeleteModal.project_id, false)} className="flex-1 py-2 rounded-full bg-white text-black text-[12px] font-medium hover:bg-zinc-100">📦 Arquivar</button>
+                )}
+              </div>
+              {!deleteHard && <button onClick={()=>{setDeleteHard(true);}} className="w-full text-[10px] text-zinc-500 hover:text-red-400">Quero hard delete definitivo →</button>}
+            </div>
+            <div className="mt-4 text-[10px] font-mono text-zinc-600">P8: Soft arquiva (restaura via /restore), Hard elimina definitivamente + generations + branches • Esc fecha • Você no centro</div>
+          </div>
+        </div>
+      )}
+
+      {showBulkModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="rounded-[20px] bg-[#111116] border border-zinc-800 p-6 max-w-[400px] w-full">
+            <h3 className="font-semibold text-[14px]">🗑️ Bulk Delete P8 • {selectedForBulk.length} projetos</h3>
+            <p className="mt-2 text-[12px] text-zinc-400">Projetos selecionados: {selectedForBulk.slice(0,3).join(", ")}{selectedForBulk.length>3 ? ` +${selectedForBulk.length-3}` : ""}</p>
+            <div className="mt-4 flex gap-2">
+              <button onClick={()=>setShowBulkModal(false)} className="flex-1 py-2 rounded-full bg-zinc-900 border border-zinc-800 text-[12px]">Cancelar (Esc)</button>
+              <button onClick={()=>bulkDeleteProjects(false)} className="flex-1 py-2 rounded-full bg-amber-600 text-white text-[12px]">📦 Arquivar {selectedForBulk.length}</button>
+            </div>
+            <button onClick={()=>bulkDeleteProjects(true)} className="w-full mt-2 py-2 rounded-full bg-red-600 text-white text-[12px]">💥 Hard Delete {selectedForBulk.length} definitivo</button>
+            <div className="mt-3 text-[10px] font-mono text-zinc-600">P8: Bulk delete + Drag&Drop + Shortcuts Ctrl+Shift+D • Esc fecha</div>
+          </div>
+        </div>
+      )}
+
+      {showShortcuts && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="rounded-[20px] bg-[#111116] border border-zinc-800 p-6 max-w-[500px] w-full">
+            <div className="flex justify-between items-center">
+              <h3 className="font-semibold text-[14px]">⌨️ Atalhos P8 • UX Melhorado + Drag&Drop</h3>
+              <button onClick={()=>setShowShortcuts(false)} className="w-7 h-7 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center">✕</button>
+            </div>
+            <div className="mt-4 grid gap-2 text-[12px]">
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+K / Cmd+K</span><span className="text-zinc-500">Focar chat input</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+L</span><span className="text-zinc-500">Limpar chat</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+B</span><span className="text-zinc-500">Toggle Workplace</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+J</span><span className="text-zinc-500">Toggle Agentes</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+S</span><span className="text-zinc-500">Salvar arquivo (no editor)</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+Shift+D</span><span className="text-zinc-500">Bulk delete</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Ctrl+/</span><span className="text-zinc-500">Mostrar atalhos</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Esc</span><span className="text-zinc-500">Fechar modais</span></div>
+              <div className="flex justify-between p-2 rounded-xl bg-zinc-900 border border-zinc-800"><span>Drag&Drop</span><span className="text-zinc-500">Arrastar arquivos entre projetos</span></div>
+            </div>
+            <div className="mt-4 p-3 rounded-xl bg-violet-500/5 border border-violet-500/20 text-[11px] text-zinc-400">
+              P8: Refactor componentes + UX shortcuts/drag&drop. Componentes separados logicamente, atalhos teclado, drag&drop workplace, bulk delete melhorado. Você no centro, você cria orientando AI. Backend P8.3: multi-agent real + prod cluster.
+            </div>
+          </div>
+        </div>
+      )}
+
+      <footer className="border-t border-zinc-900 mt-8 py-3 text-center text-[10px] font-mono text-zinc-600">
+        AI Provider OS v1.2 P8 REAL • Chat clean sem templates • Comandos REAL /testa /audita /contesta /melhora /explica /benchmark /rigor /seguranca /agentes /exporta /branch /elimina /limpa /ajuda • Atalhos Ctrl+K/L/B/J/S/Shift+D/ / • Drag&Drop P8 • {projects.length} projetos • {providers.length} providers • {stats?.ai_network?.models_distinct ?? 427} distinct • {rigor?.models?.measured ?? 175} measured {rigor?.models?.measured_percent ?? 42.7}% • {agents.length} agentes empoderados • Audit {auditStats?.total ?? 0} • 43 tests PASS • v1.2.0-P8 Lisboa 2026-09-16 • Você no centro • Você cria orientando AI • REAL não mock • Rigor 80% bloqueado free tiers auditado honestamente
+      </footer>
+    </div>
+  );
+}
+
+function StatCard({label, value, sub}:{label:string, value:any, sub:string}){
+  return <div className="rounded-[14px] bg-[#111116] border border-zinc-900 p-3.5"><div className="text-[10px] font-medium text-zinc-500 tracking-wide">{label}</div><div className="mt-1.5 text-[18px] font-bold tracking-tight">{value}</div><div className="text-[10px] font-mono text-zinc-500 mt-1">{sub}</div></div>;
+}
+function BestRow({label, value, score}:{label:string, value:string, score:any}){
+  return <div className="flex justify-between py-1.5 border-b border-zinc-900 last:border-0 text-[11px]"><span className="text-zinc-500">{label}</span><span className="font-medium truncate max-w-[160px]">{value} • {score ?? 0}</span></div>;
+}

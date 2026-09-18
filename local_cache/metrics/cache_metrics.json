@@ -1,0 +1,16 @@
+{
+  "created_at": "2026-09-18T10:36:33.927082+00:00",
+  "l1_hits": 0,
+  "l1_misses": 0,
+  "l2_hits": 0,
+  "l2_misses": 0,
+  "l3_hits": 0,
+  "l3_misses": 0,
+  "total_hits": 0,
+  "total_misses": 0,
+  "hit_rate": 0.0,
+  "latency_saved_ms": 0,
+  "fast_path_count": 0,
+  "complex_path_count": 0,
+  "persistence": "SQLite + JSON local folder"
+}

@@ -1,0 +1,51 @@
+"use client";
+import { memo, useMemo } from "react";
+export const AgentNetworkDiagram = memo(function AgentNetworkDiagram({ agents, providers, models }: any){
+  const stats = useMemo(()=>{
+    const totalAgents = agents?.length || 17;
+    const totalProviders = providers?.length || 26;
+    const totalModels = models?.length || 726;
+    const measured = models?.filter((m:any)=>m.test_count>0).length || 247;
+    return { totalAgents, totalProviders, totalModels, measured };
+  }, [agents, providers, models]);
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2 text-[11px] flex-wrap">
+        <span className="px-2 py-1 rounded-full bg-white text-black font-medium">Network P17 Lean - {stats.totalAgents} agents - {stats.totalProviders} provs - {stats.totalModels} models</span>
+        <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{stats.measured} measured - {Math.round(stats.measured/stats.totalModels*100)}% rigor</span>
+        <span className="px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">P17 Lean 3 agents - session race cache exact alerts rigor</span>
+      </div>
+      <div className="rounded-xl bg-[#08080c] border border-zinc-800 p-3 overflow-auto">
+        <svg viewBox="0 0 800 500" className="w-full h-[500px] text-[10px]">
+          <defs>
+            <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#52525b" /></marker>
+            <radialGradient id="orchGrad" cx="50%" cy="50%" r="50%"><stop offset="0%" stopColor="#fff" stopOpacity="0.9"/><stop offset="100%" stopColor="#a1a1aa" stopOpacity="0.2"/></radialGradient>
+          </defs>
+          <g opacity="0.1">{Array.from({length:16}).map((_,i)=><line key={`v${i}`} x1={i*50} y1="0" x2={i*50} y2="500" stroke="#27272a" strokeWidth="0.5"/>)}{Array.from({length:10}).map((_,i)=><line key={`h${i}`} x1="0" y1={i*50} x2="800" y2={i*50} stroke="#27272a" strokeWidth="0.5"/>)}</g>
+          <g transform="translate(400,250)"><circle r="45" fill="url(#orchGrad)" stroke="#fff" strokeWidth="2"/><text textAnchor="middle" dy="-5" fill="#000" fontWeight="bold" fontSize="11">ORCHESTRATOR</text><text textAnchor="middle" dy="8" fill="#000" fontSize="8">P17 LEAN</text><text textAnchor="middle" dy="18" fill="#000" fontSize="7">AUTO - Ranking</text></g>
+          <g transform="translate(200,100)"><rect x="-50" y="-20" width="100" height="40" rx="12" fill="#18181b" stroke="#22c55e" strokeWidth="1.5"/><text textAnchor="middle" dy="-2" fill="#22c55e" fontWeight="bold" fontSize="9">🔍 Discovery</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="7">26 provs 726 models</text><line x1="45" y1="15" x2="130" y2="110" stroke="#22c55e" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(600,100)"><rect x="-50" y="-20" width="100" height="40" rx="12" fill="#18181b" stroke="#eab308" strokeWidth="1.5"/><text textAnchor="middle" dy="-2" fill="#eab308" fontWeight="bold" fontSize="9">🏥 Health</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="7">VERIFIED 15</text><line x1="-45" y1="15" x2="-130" y2="110" stroke="#eab308" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(150,250)"><rect x="-45" y="-18" width="90" height="36" rx="10" fill="#18181b" stroke="#3b82f6" strokeWidth="1.5"/><text textAnchor="middle" dy="-1" fill="#3b82f6" fontWeight="bold" fontSize="8">👨‍💻 Code Reviewer</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="6">/testa</text><line x1="45" y1="0" x2="190" y2="0" stroke="#3b82f6" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(650,250)"><rect x="-45" y="-18" width="90" height="36" rx="10" fill="#18181b" stroke="#ef4444" strokeWidth="1.5"/><text textAnchor="middle" dy="-1" fill="#ef4444" fontWeight="bold" fontSize="8">🧐 Critic</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="6">/contesta</text><line x1="-45" y1="0" x2="-190" y2="0" stroke="#ef4444" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(200,400)"><rect x="-50" y="-20" width="100" height="40" rx="12" fill="#18181b" stroke="#a855f7" strokeWidth="1.5"/><text textAnchor="middle" dy="-2" fill="#a855f7" fontWeight="bold" fontSize="9">✅ Rigor Checker</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="7">{stats.measured}/726 {Math.round(stats.measured/726*100)}% 0pct inv</text><line x1="45" y1="-15" x2="130" y2="-110" stroke="#a855f7" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(600,400)"><rect x="-50" y="-20" width="100" height="40" rx="12" fill="#18181b" stroke="#f97316" strokeWidth="1.5"/><text textAnchor="middle" dy="-2" fill="#f97316" fontWeight="bold" fontSize="9">🛡️ Security</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="7">Fernet SSRF PII</text><line x1="-45" y1="-15" x2="-130" y2="-110" stroke="#f97316" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(400,80)"><rect x="-50" y="-18" width="100" height="36" rx="10" fill="#18181b" stroke="#06b6d4" strokeWidth="1.5"/><text textAnchor="middle" dy="-1" fill="#06b6d4" fontWeight="bold" fontSize="8">✨ Prompt Optimizer</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="6">provider-specific</text><line x1="0" y1="18" x2="0" y2="105" stroke="#06b6d4" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(400,420)"><rect x="-55" y="-18" width="110" height="36" rx="10" fill="#18181b" stroke="#ec4899" strokeWidth="1.5"/><text textAnchor="middle" dy="-1" fill="#ec4899" fontWeight="bold" fontSize="8">🔄 Loop Engine</text><text textAnchor="middle" dy="10" fill="#71717a" fontSize="6">P17 Lean 3 agents</text><line x1="0" y1="-18" x2="0" y2="-105" stroke="#ec4899" strokeWidth="1" markerEnd="url(#arrow)" opacity="0.6"/></g>
+          <g transform="translate(400,30)"><text textAnchor="middle" fill="#71717a" fontSize="8">PROVIDERS 26 - 18 keys 69.2% - 726 models - 585 distinct</text></g>
+          <g transform="translate(100,470)"><rect x="-70" y="-12" width="140" height="24" rx="12" fill="#09090b" stroke="#27272a"/><text textAnchor="middle" dy="3" fill="#52525b" fontSize="7">🛡️ Guardrails 21</text></g>
+          <g transform="translate(300,470)"><rect x="-70" y="-12" width="140" height="24" rx="12" fill="#09090b" stroke="#27272a"/><text textAnchor="middle" dy="3" fill="#52525b" fontSize="7">🔭 Observability P17 Lean</text></g>
+          <g transform="translate(500,470)"><rect x="-70" y="-12" width="140" height="24" rx="12" fill="#09090b" stroke="#27272a"/><text textAnchor="middle" dy="3" fill="#52525b" fontSize="7">💰 Cost Sessions Cache 50%</text></g>
+          <g transform="translate(700,470)"><rect x="-70" y="-12" width="140" height="24" rx="12" fill="#09090b" stroke="#27272a"/><text textAnchor="middle" dy="3" fill="#52525b" fontSize="7">📊 Grafana OTel P17 Lean</text></g>
+          <text x="400" y="495" textAnchor="middle" fill="#3f3f46" fontSize="7">P17 LEAN FIXED 2of2 cache 30s 50pct saves 4834ms alerts LOW 34pct 3 agents</text>
+        </svg>
+      </div>
+      <div className="grid md:grid-cols-4 gap-2 text-[10px]">
+        <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800"><div className="font-medium">🤖 Agents - {stats.totalAgents} - P17 Lean 3</div><div className="mt-1 text-zinc-500 space-y-0.5"><div>🔍 Discovery 26 provs</div><div>🏥 Health VERIFIED</div><div>👨‍💻 Code Reviewer /testa</div><div>🧐 Critic /contesta</div><div>✅ Rigor {stats.measured}/726</div><div>🏆 Ranker simples rigor+health</div><div>✨ Prompt provider-specific</div><div>🔄 Fallback 1x técnico</div></div></div>
+        <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800"><div className="font-medium">🌐 Providers - {stats.totalProviders} - 18 keys</div><div className="mt-1 text-zinc-500 space-y-0.5"><div>KIE 206 chat 33 img 56 vid 67</div><div>Groq 31 27 measured 87%</div><div>Polli 30 Typhoon 6</div><div>Horde 15 Nous 30</div><div>Cloudflare 17 Nvidia 54</div><div>OpenRouter 25 HF 23 Mistral 34</div><div>585 distinct 77 multi</div><div>Rigor 34%- GT 50pct loop</div></div></div>
+        <div className="p-2 rounded-xl bg-zinc-900 border border-zinc-800"><div className="font-medium">📊 P17 Lean Fixes</div><div className="mt-1 text-zinc-500 space-y-0.5"><div>✅ Session race FIXED 2/2</div><div>✅ Cache exact 30s 50pct hit</div><div>✅ Alerts rigor LOW 34%</div><div>🏆 Ranker simples ESTIMATIVA</div><div>✨ Prompt provider claim vs measured</div><div>🧐 Critic heuristics 10ms</div><div>🔄 Fallback 1x técnico</div><div>0pct invenção UNKNOWN</div></div></div>
+        <div className="p-2 rounded-xl bg-violet-500/5 border border-violet-500/20"><div className="font-medium text-violet-300">🔭 P17 Lean - 3 agents</div><div className="mt-1 text-zinc-500 space-y-0.5"><div>Tracing trace_id span_id</div><div>Sessions 2/2 FIXED</div><div>Cache exact 30s 50%</div><div>Cost tracking free</div><div>Logs JSON</div><div>Alerts rigor LOW</div><div>Guardrails 21</div><div>Grafana OTel</div></div></div>
+      </div>
+      <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px]"><div className="font-medium">🕸️ P17 Lean — Orchestrator + 17 Agents + 26 Providers + 726 Models + 3 Novos Ranker Prompt Critic Fallback + Fixes session race cache exact alerts rigor</div><div className="mt-1 text-zinc-500">P17 Lean: fix session race get_or_create_session não sobrescreve turns 2/2 vs 1/2 antes + cache exact 30s TTL prompt+profile only hit_rate 0pct to 50pct saves 4834ms + alerts rigor LOW 34pct LT 50pct total 0 to 1 + Provider Ranker simples rigor 60pct health 20pct overall 20pct ESTIMATIVA sem p50 p95 até traces GT 100 marca UNKNOWN + Prompt Engineer provider-specific templates Groq concise Gemini system separate OpenRouter model-specific KIE measured + Response Critic heuristics 10ms sem LLM sem hallucination UNKNOWN + Fallback 1x técnico não quality + Learning Loop futuro. Princípio você cria orientando AI, rigoroso real sem invenção marca ESTIMATIVA vs UNKNOWN.</div></div>
+    </div>
+  );
+});

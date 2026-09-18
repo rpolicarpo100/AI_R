@@ -1,0 +1,18 @@
+{
+  "name": "React Counter Component",
+  "description": "Componente React com useState, TypeScript, Tailwind",
+  "type": "frontend",
+  "language": "typescript",
+  "framework": "react",
+  "tags": [
+    "frontend",
+    "react",
+    "typescript",
+    "counter"
+  ],
+  "files": {
+    "Counter.tsx": "import { useState } from 'react';\n\ninterface CounterProps {\n  initial?: number;\n}\n\nexport default function Counter({ initial = 0 }: CounterProps) {\n  const [count, setCount] = useState(initial);\n\n  return (\n    <div className=\"flex flex-col items-center gap-4 p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">\n      <h2 className=\"text-lg font-bold\">Counter: {count}</h2>\n      <div className=\"flex gap-2\">\n        <button onClick={() => setCount(c => c - 1)} className=\"px-4 py-2 rounded-lg bg-[#1e1e2e] hover:bg-[#2a2a3e]\">-1</button>\n        <button onClick={() => setCount(0)} className=\"px-4 py-2 rounded-lg bg-[#1e1e2e] hover:bg-[#2a2a3e]\">Reset</button>\n        <button onClick={() => setCount(c => c + 1)} className=\"px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-700\">+1</button>\n      </div>\n      <p className=\"text-xs text-slate-500\">Template AI Provider OS - React</p>\n    </div>\n  );\n}\n",
+    "README.md": "# React Counter Template\n\nComponente React funcional com TypeScript e Tailwind\n\n## Uso\n```tsx\nimport Counter from './Counter';\n<Counter initial={0} />\n```\n",
+    "package.json": "{\n  \"name\": \"react-counter-template\",\n  \"dependencies\": {\n    \"react\": \"^18.0.0\"\n  }\n}\n"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "name": "FastAPI CRUD API",
+  "description": "API FastAPI com CRUD completo, SQLAlchemy, valida\u00e7\u00e3o, docs",
+  "type": "api",
+  "language": "python",
+  "framework": "fastapi",
+  "tags": [
+    "api",
+    "fastapi",
+    "crud",
+    "python"
+  ],
+  "files": {
+    "main.py": "from fastapi import FastAPI, Depends, HTTPException\nfrom sqlalchemy import create_engine, Column, Integer, String\nfrom sqlalchemy.orm import sessionmaker, declarative_base, Session\nfrom pydantic import BaseModel\nfrom typing import List\n\napp = FastAPI(title=\"CRUD API - AI Provider OS Template\")\n\n# DB\nSQLALCHEMY_DATABASE_URL = \"sqlite:///./test.db\"\nengine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={\"check_same_thread\": False})\nSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)\nBase = declarative_base()\n\nclass ItemDB(Base):\n    __tablename__ = \"items\"\n    id = Column(Integer, primary_key=True, index=True)\n    name = Column(String, index=True)\n    description = Column(String)\n\nBase.metadata.create_all(bind=engine)\n\nclass ItemCreate(BaseModel):\n    name: str\n    description: str = \"\"\n\nclass ItemOut(ItemCreate):\n    id: int\n    class Config:\n        from_attributes = True\n\ndef get_db():\n    db = SessionLocal()\n    try:\n        yield db\n    finally:\n        db.close()\n\n@app.get(\"/\")\ndef root():\n    return {\"message\": \"FastAPI CRUD Template - AI Provider OS\"}\n\n@app.post(\"/items/\", response_model=ItemOut)\ndef create_item(item: ItemCreate, db: Session = Depends(get_db)):\n    db_item = ItemDB(**item.dict())\n    db.add(db_item)\n    db.commit()\n    db.refresh(db_item)\n    return db_item\n\n@app.get(\"/items/\", response_model=List[ItemOut])\ndef list_items(db: Session = Depends(get_db)):\n    return db.query(ItemDB).all()\n\n@app.get(\"/items/{item_id}\", response_model=ItemOut)\ndef get_item(item_id: int, db: Session = Depends(get_db)):\n    item = db.query(ItemDB).filter(ItemDB.id == item_id).first()\n    if not item:\n        raise HTTPException(404, \"Item not found\")\n    return item\n\n@app.put(\"/items/{item_id}\", response_model=ItemOut)\ndef update_item(item_id: int, item: ItemCreate, db: Session = Depends(get_db)):\n    db_item = db.query(ItemDB).filter(ItemDB.id == item_id).first()\n    if not db_item:\n        raise HTTPException(404, \"Item not found\")\n    db_item.name = item.name\n    db_item.description = item.description\n    db.commit()\n    db.refresh(db_item)\n    return db_item\n\n@app.delete(\"/items/{item_id}\")\ndef delete_item(item_id: int, db: Session = Depends(get_db)):\n    db_item = db.query(ItemDB).filter(ItemDB.id == item_id).first()\n    if not db_item:\n        raise HTTPException(404, \"Item not found\")\n    db.delete(db_item)\n    db.commit()\n    return {\"deleted\": item_id}\n",
+    "requirements.txt": "fastapi==0.115.12\nuvicorn[standard]==0.34.0\nsqlalchemy==2.0.36\npydantic==2.11.3",
+    "README.md": "# FastAPI CRUD Template\n\nGerado via AI Provider OS Workplace Templates\n\n## Run\n```bash\npip install -r requirements.txt\nuvicorn main:app --reload\n```\n\n## Endpoints\n- POST /items/ - Create\n- GET /items/ - List\n- GET /items/{id} - Get\n- PUT /items/{id} - Update\n- DELETE /items/{id} - Delete\n\n## Docs\n- /docs Swagger\n- /redoc\n",
+    ".env.example": "DATABASE_URL=sqlite:///./test.db\nSECRET_KEY=change-me\n"
+  }
+}

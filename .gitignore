@@ -1,0 +1,55 @@
+# Secrets
+.fernet_key
+backend/.fernet_key
+.env
+backend/.env
+frontend/.env.local
+frontend/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+.venv/
+venv/
+.env/
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+.next/
+out/
+dist/
+coverage/
+
+# DB
+*.db
+*.sqlite
+*.sqlite3
+ai_provider_os.db
+backend/*.db
+
+# Logs
+*.log
+logs/
+tmp/
+.tmp/
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# IDE
+.vscode/
+.idea/
+*.code-workspace
+
+# Benchmarks
+benchmark_results/

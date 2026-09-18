@@ -1,0 +1,16 @@
+{
+  "name": "SQL Analytics Queries",
+  "description": "Queries SQL analytics com JOINs, agrega\u00e7\u00f5es, window functions",
+  "type": "database",
+  "language": "sql",
+  "framework": "",
+  "tags": [
+    "database",
+    "sql",
+    "analytics"
+  ],
+  "files": {
+    "analytics.sql": "-- SQL Analytics Template - AI Provider OS\n-- Queries com JOINs, agrega\u00e7\u00f5es, window functions\n\n-- 1. Total vendas por m\u00eas\nSELECT \n    DATE_TRUNC('month', created_at) as mes,\n    COUNT(*) as total_pedidos,\n    SUM(total) as receita,\n    AVG(total) as ticket_medio\nFROM orders\nWHERE created_at >= NOW() - INTERVAL '12 months'\nGROUP BY 1\nORDER BY 1 DESC;\n\n-- 2. Top clientes\nSELECT \n    u.id,\n    u.name,\n    COUNT(o.id) as pedidos,\n    SUM(o.total) as gasto_total,\n    RANK() OVER (ORDER BY SUM(o.total) DESC) as ranking\nFROM users u\nJOIN orders o ON o.user_id = u.id\nGROUP BY u.id, u.name\nORDER BY gasto_total DESC\nLIMIT 10;\n\n-- 3. Produtos sem vendas\nSELECT p.id, p.name\nFROM products p\nLEFT JOIN order_items oi ON oi.product_id = p.id\nWHERE oi.id IS NULL;\n\n-- 4. Taxa convers\u00e3o por dia\nSELECT \n    DATE(created_at) as dia,\n    COUNT(*) as visitas,\n    COUNT(CASE WHEN converted THEN 1 END) as conversoes,\n    ROUND(COUNT(CASE WHEN converted THEN 1 END)::numeric / COUNT(*) * 100, 2) as taxa\nFROM visits\nGROUP BY 1\nORDER BY 1 DESC;\n",
+    "README.md": "# SQL Analytics Template\n\nQueries analytics com JOINs, agrega\u00e7\u00f5es, window functions\n\n## Uso\nCopie queries e adapte para sua schema\n\n## Inclui\n- Vendas por m\u00eas\n- Top clientes com RANK()\n- Produtos sem vendas LEFT JOIN\n- Taxa convers\u00e3o\n"
+  }
+}

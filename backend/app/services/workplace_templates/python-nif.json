@@ -1,0 +1,18 @@
+{
+  "name": "Python NIF Validator",
+  "description": "Validador NIF portugu\u00eas com checksum mod 11, testes",
+  "type": "utility",
+  "language": "python",
+  "framework": "",
+  "tags": [
+    "validation",
+    "utility",
+    "python",
+    "nif"
+  ],
+  "files": {
+    "main.py": "def validar_nif(nif: str) -> bool:\n    \"\"\"\n    Valida NIF portugu\u00eas com checksum mod 11.\n    Template AI Provider OS - Workplace\n    \"\"\"\n    if not nif or not isinstance(nif, str):\n        return False\n    nif = nif.strip().replace(\" \", \"\")\n    if len(nif) != 9 or not nif.isdigit():\n        return False\n    # Primeiro d\u00edgito 1,2,3,5,6,8,9\n    if nif[0] not in \"1235689\":\n        return False\n    # Checksum mod 11\n    total = sum(int(nif[i]) * (9 - i) for i in range(8))\n    resto = total % 11\n    digito = 0 if resto < 2 else 11 - resto\n    return digito == int(nif[8])\n\ndef main():\n    testes = [\"123456789\", \"501442600\", \"123456780\", \"\", \"abc\"]\n    for t in testes:\n        print(f\"{t}: {validar_nif(t)}\")\n\nif __name__ == \"__main__\":\n    main()\n",
+    "test_main.py": "from main import validar_nif\n\ndef test_valid():\n    assert validar_nif(\"501442600\") == True\n\ndef test_invalid_length():\n    assert validar_nif(\"123\") == False\n\ndef test_invalid_chars():\n    assert validar_nif(\"abc\") == False\n    assert validar_nif(\"\") == False\n    assert validar_nif(None) == False\n\ndef test_checksum():\n    assert validar_nif(\"123456789\") == True\n",
+    "README.md": "# NIF Validator Template\n\nValidador NIF portugu\u00eas com checksum mod 11\n\n## Run\n```bash\npython main.py\npytest test_main.py\n```\n\n## Fun\u00e7\u00e3o\n`validar_nif(nif: str) -> bool` - retorna True se NIF v\u00e1lido\n"
+  }
+}
