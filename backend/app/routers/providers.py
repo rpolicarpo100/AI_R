@@ -20,6 +20,14 @@ except Exception as e:
     print(f"[P15] Dedicated adapters load failed {e}, using generic")
     DEDICATED_ADAPTERS_P15 = {}
 
+# P15 200 — Dedicated adapters for 100 new providers
+try:
+    from ..adapters.dedicated_p15_200 import DEDICATED_ADAPTERS_P15_200
+    print(f"[P15 200] Loaded {len(DEDICATED_ADAPTERS_P15_200)} dedicated adapters for 200 providers")
+except Exception as e:
+    print(f"[P15 200] Dedicated adapters load failed {e}, using generic")
+    DEDICATED_ADAPTERS_P15_200 = {}
+
 def validate_base_url(url: str):
     """P3 Security - SSRF validation - evita internal IPs, metadata, mas permite localhost para Ollama local real"""
     try:
@@ -75,6 +83,7 @@ ADAPTERS_MAP = {
     "huggingface": OpenAICompatibleAdapter(),
     "kie_ai": OpenAICompatibleAdapter(),  # P10 - KIE AI 206 models 80 credits gpt-5-2 measured
     **DEDICATED_ADAPTERS_P15,  # P15 — 20+ dedicated adapters for 90 providers
+    **DEDICATED_ADAPTERS_P15_200,  # P15 200 — 20 dedicated adapters for 100 new providers
 }
 
 class ProviderCreate(BaseModel):

@@ -119,7 +119,8 @@ async def get_shared_client(timeout: float = 10.0) -> httpx.AsyncClient:
     if _shared_client and not _shared_client.is_closed:
         return _shared_client
     
-    limits = httpx.Limits(max_keepalive_connections=10, max_connections=50, keepalive_expiry=20.0)
+    # P24 — Use policy for 200 providers, not hardcoded 10/50/20
+    limits = httpx.Limits(max_keepalive_connections=HTTP_POOL_KEEPALIVE//2, max_connections=HTTP_POOL_MAX//2, keepalive_expiry=HTTP_POOL_EXPIRY)
     timeout_obj = get_http_timeout(connect_timeout=3.0, read_timeout=timeout)
     
     _shared_client = httpx.AsyncClient(
