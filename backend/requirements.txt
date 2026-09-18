@@ -1,6 +1,6 @@
 # AI Provider OS — Requirements — FIX Windows pydantic-core wheel (sem Rust)
-# Antes: versões fixas == causavam Failed building wheel for pydantic-core no Windows Python 3.13 sem Rust/maturin
-# Agora: versões flexíveis >= para pip encontrar wheel binário Windows
+# Antes: versoes fixas com pin exato causavam Failed building wheel for pydantic-core no Windows Python 3.13 sem Rust/maturin
+# Agora: versoes flexiveis >= para pip encontrar wheel binario Windows — 100% sem Rust
 
 fastapi>=0.110,<0.200
 uvicorn[standard]>=0.30

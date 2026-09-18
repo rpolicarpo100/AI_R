@@ -41,4 +41,12 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
 
+# Security warning for default SECRET_KEY — critical improvement
 settings = Settings()
+if settings.SECRET_KEY in ["dev-secret-key-change-in-prod-32chars-min-32", "change-me-32chars-minimum-secret-key-prod", "auto-generated-dev-key-32-chars-minimum-change-prod"]:
+    print(f"[SECURITY WARNING] SECRET_KEY is default/dev — change in prod! Current: {settings.SECRET_KEY[:16]}... — Set SECRET_KEY env var with 32+ chars random")
+if settings.CORS_ORIGINS == ["*"]:
+    print(f"[SECURITY WARNING] CORS_ORIGINS=* — insecure for prod — set CORS_ORIGINS env var to your domains, e.g. https://yourdomain.com")
+# Docker volume bug warning
+if "ai_provider_os.db" in settings.DATABASE_URL and "/app/data/" not in settings.DATABASE_URL and settings.DATABASE_URL.startswith("sqlite:////app/"):
+    print(f"[DOCKER WARNING] DATABASE_URL {settings.DATABASE_URL} may be file mount bug — use sqlite:////app/data/ai_provider_os.db with volume backend_db:/app/data")

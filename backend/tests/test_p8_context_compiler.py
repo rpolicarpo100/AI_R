@@ -393,9 +393,21 @@ def test_p8_metricas_qualidade():
     print(f"✅ Métricas qualidade: original {q['original_chars']}→compiled {q['compiled_chars']} saved {q['saved_chars']} quality {q['overall_quality']}% critical {q['critical_preserved']} budget {q['budget_score']}%")
 
 def test_p8_integration_chat():
-    """P8 — Integration with chat.py"""
-    with open("app/routers/chat.py") as f:
-        content = f.read()
+    """P8 — Integration with chat.py — FIX path para rodar de root ou backend"""
+    import os
+    # Tenta ambos caminhos: quando roda de backend/ e quando roda de root
+    possible_paths = [
+        "app/routers/chat.py",
+        "backend/app/routers/chat.py",
+        os.path.join(os.path.dirname(__file__), "..", "app", "routers", "chat.py"),
+    ]
+    content = None
+    for p in possible_paths:
+        if os.path.exists(p):
+            with open(p) as f:
+                content = f.read()
+            break
+    assert content is not None, f"chat.py not found in {possible_paths}"
     
     assert "context_compiler" in content
     assert "P8 CONTEXT COMPILER" in content
