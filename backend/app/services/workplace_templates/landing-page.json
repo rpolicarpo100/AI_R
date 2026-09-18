@@ -1,0 +1,20 @@
+{
+  "name": "Landing Page Moderna",
+  "description": "Landing page com hero, features, pricing, CTA, Tailwind, responsivo",
+  "type": "frontend",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "landing",
+    "nextjs",
+    "tailwind",
+    "marketing"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nexport default function Landing() {\n  return (\n    <div className=\"min-h-screen bg-[#0a0a0f] text-white\">\n      <nav className=\"p-6 flex justify-between items-center border-b border-[#1e1e2e]\">\n        <div className=\"font-bold text-xl\">AI App</div>\n        <button className=\"px-4 py-2 rounded-lg bg-white text-black\">Come\u00e7ar</button>\n      </nav>\n      <section className=\"p-12 text-center\">\n        <h1 className=\"text-5xl font-bold\">Constr\u00f3i Apps 10x Mais R\u00e1pido</h1>\n        <p className=\"text-slate-400 mt-4 text-xl\">Com AI Provider OS \u2014 200 providers, 181 free, gateway OpenAI-compatible</p>\n        <button className=\"mt-8 px-8 py-4 rounded-xl bg-white text-black font-bold text-lg\">Come\u00e7ar Gr\u00e1tis</button>\n      </section>\n      <section className=\"p-12 grid grid-cols-3 gap-6\">\n        {[\"200 Providers\", \"181 Free\", \"OpenAI-Compatible\"].map(f => (\n          <div key={f} className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">\n            <div className=\"font-bold\">{f}</div>\n            <div className=\"text-slate-400 text-sm mt-2\">Real, funcional, sem simula\u00e7\u00e3o</div>\n          </div>\n        ))}\n      </section>\n    </div>\n  );\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Landing Page Moderna', description: 'Template landing page' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"landing-page\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

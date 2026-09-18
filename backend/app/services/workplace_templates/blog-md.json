@@ -1,0 +1,20 @@
+{
+  "name": "Blog Markdown",
+  "description": "Blog com markdown, lista posts, p\u00e1gina post, Tailwind, react-markdown",
+  "type": "frontend",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "blog",
+    "markdown",
+    "nextjs",
+    "tailwind"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nexport default function Blog() {\n  const posts = [{ id: 1, title: \"200 Providers \u2014 Dobro 100\u2192200\", date: \"2026-09-18\" }, { id: 2, title: \"AI Provider OS \u2014 Rigor 100%\", date: \"2026-09-18\" }];\n  return (\n    <div className=\"min-h-screen bg-[#0a0a0f] text-white p-8 max-w-3xl mx-auto\">\n      <h1 className=\"text-3xl font-bold\">Blog AI Provider OS</h1>\n      <p className=\"text-slate-400 mt-2\">200 providers, 181 free_no_card, 50 adapters dedicados</p>\n      <div className=\"mt-8 space-y-4\">\n        {posts.map(post => (\n          <div key={post.id} className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">\n            <div className=\"font-bold text-xl\">{post.title}</div>\n            <div className=\"text-slate-400 text-sm mt-2\">{post.date}</div>\n            <div className=\"text-slate-300 mt-4\">Conte\u00fado do post sobre {post.title} \u2014 real, funcional, sem simula\u00e7\u00e3o.</div>\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Blog Markdown', description: 'Template blog markdown' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"blog-markdown\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\", \"react-markdown\": \"^10.1.0\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

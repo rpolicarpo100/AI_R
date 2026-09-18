@@ -1,0 +1,20 @@
+{
+  "name": "Dashboard SaaS",
+  "description": "Dashboard SaaS com sidebar, m\u00e9tricas, gr\u00e1ficos, tabelas, Tailwind",
+  "type": "fullstack",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "dashboard",
+    "saas",
+    "nextjs",
+    "tailwind"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from \"react\";\nexport default function Dashboard() {\n  const [stats] = useState({ users: 1243, revenue: 5423, providers: 200 });\n  return (\n    <div className=\"min-h-screen bg-[#0a0a0f] text-white flex\">\n      <aside className=\"w-64 p-6 border-r border-[#1e1e2e] bg-[#11111b]\">\n        <div className=\"font-bold\">SaaS Dashboard</div>\n        <nav className=\"mt-8 space-y-2\">\n          <div className=\"p-2 rounded bg-[#1e1e2e]\">Dashboard</div>\n          <div className=\"p-2 rounded text-slate-400\">Providers</div>\n          <div className=\"p-2 rounded text-slate-400\">Models</div>\n        </nav>\n      </aside>\n      <main className=\"flex-1 p-8\">\n        <h1 className=\"text-2xl font-bold\">Dashboard \u2014 200 Providers</h1>\n        <div className=\"grid grid-cols-3 gap-6 mt-8\">\n          <div className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">\n            <div className=\"text-slate-400\">Providers</div>\n            <div className=\"text-3xl font-bold mt-2\">{stats.providers}</div>\n          </div>\n          <div className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">\n            <div className=\"text-slate-400\">Users</div>\n            <div className=\"text-3xl font-bold mt-2\">{stats.users}</div>\n          </div>\n          <div className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">\n            <div className=\"text-slate-400\">Revenue</div>\n            <div className=\"text-3xl font-bold mt-2\">${stats.revenue}</div>\n          </div>\n        </div>\n      </main>\n    </div>\n  );\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Dashboard SaaS', description: 'Template dashboard SaaS' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"dashboard-saas\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}
