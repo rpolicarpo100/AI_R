@@ -1,0 +1,21 @@
+{
+  "name": "Portfolio + Blog com MD",
+  "description": "Portfolio com blog Markdown, projetos, SEO, 200 providers para gera\u00e7\u00e3o conte\u00fado AI",
+  "type": "frontend",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "portfolio",
+    "blog",
+    "markdown",
+    "seo",
+    "200_providers"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nexport default function PortfolioBlog() {\n  return (<div className=\"min-h-screen bg-[#0a0a0f] text-white p-8\"><h1 className=\"text-4xl font-bold\">Portfolio + Blog</h1><p className=\"text-slate-400 mt-2\">Portfolio com blog MD + 200 providers AI para gera\u00e7\u00e3o conte\u00fado</p><div className=\"mt-8 grid grid-cols-2 gap-6\"><div className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\"><h2 className=\"font-bold\">Projetos</h2><p className=\"text-slate-400 text-sm mt-2\">3 projetos com AI Provider OS</p></div><div className=\"p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\"><h2 className=\"font-bold\">Blog</h2><p className=\"text-slate-400 text-sm mt-2\">Artigos Markdown com gera\u00e7\u00e3o AI 200 providers</p></div></div></div>);\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Portfolio Blog', description: 'Portfolio + blog MD' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"portfolio-blog\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

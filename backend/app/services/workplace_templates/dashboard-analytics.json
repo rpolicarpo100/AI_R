@@ -1,0 +1,22 @@
+{
+  "name": "Dashboard Analytics com AI",
+  "description": "Dashboard analytics com gr\u00e1ficos, m\u00e9tricas, AI insights usando 200 providers, observability",
+  "type": "frontend",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "dashboard",
+    "analytics",
+    "ai",
+    "200_providers",
+    "observability",
+    "grafana"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nexport default function DashboardAnalytics() {\n  return (<div className=\"min-h-screen bg-[#0a0a0f] text-white p-8\"><h1 className=\"text-3xl font-bold\">Dashboard Analytics \u2014 200 Providers</h1><p className=\"text-slate-400 mt-2\">Analytics com AI insights \u2014 200 providers \u2014 observability P16</p><div className=\"mt-6 grid grid-cols-3 gap-4\">{['Requests 1.2K','Success 98%','Avg Latency 120ms'].map(m=>(<div key={m} className=\"p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e]\"><div className=\"text-sm text-slate-400\">{m.split(' ')[0]}</div><div className=\"text-xl font-bold mt-1\">{m.split(' ').slice(1).join(' ')}</div></div>))}</div><div className=\"mt-6 p-6 rounded-xl bg-[#11111b] border border-[#1e1e2e]\"><div className=\"font-bold\">AI Insights</div><div className=\"text-slate-400 text-sm mt-2\">Gerado via /v1/chat/completions 200 providers \u2014 181 free \u2014 UAI image video 938 models</div></div></div>);\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Dashboard Analytics', description: 'Dashboard analytics com AI' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"dashboard-analytics\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

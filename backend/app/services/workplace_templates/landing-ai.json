@@ -1,0 +1,22 @@
+{
+  "name": "Landing Page com AI Chat",
+  "description": "Landing page com chat AI integrado usando 200 providers gateway, streaming, 938 models UAI image video",
+  "type": "frontend",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "frontend",
+    "landing",
+    "ai",
+    "chat",
+    "200_providers",
+    "streaming",
+    "uai"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from 'react';\nexport default function LandingAI() {\n  const [msg,setMsg]=useState(''); const [chat,setChat]=useState<any[]>([]);\n  const send=async()=>{const u={role:'user', content:msg}; setChat([...chat, u]); setMsg(''); const res=await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({messages:[...chat, u]})}); const data=await res.json(); setChat(prev=>[...prev, {role:'assistant', content:data.choices?.[0]?.message?.content||'AI response'}]);};\n  return (<div className=\"min-h-screen bg-[#0a0a0f] text-white\"><nav className=\"p-6 flex justify-between items-center border-b border-[#1e1e2e]\"><div className=\"font-bold text-xl\">AI Landing</div><button className=\"px-4 py-2 rounded-lg bg-white text-black\">Come\u00e7ar</button></nav><section className=\"p-12 text-center\"><h1 className=\"text-5xl font-bold\">Landing com AI Chat \u2014 200 Providers</h1><p className=\"text-slate-400 mt-4\">Chat AI com 200 providers + UAI image video 938 models \u2014 streaming</p></section><div className=\"p-8 max-w-2xl mx-auto\"><div className=\"p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e] min-h-[300px]\">{chat.map((m,i)=>(<div key={i} className={m.role==='user'?'text-right':''}><div className={`inline-block p-2 rounded-lg mt-2 ${m.role==='user'?'bg-white text-black':'bg-[#1e1e2e]'}`}>{m.content}</div></div>))}</div><div className=\"mt-4 flex gap-2\"><input value={msg} onChange={e=>setMsg(e.target.value)} placeholder=\"Pergunta...\" className=\"flex-1 px-4 py-2 rounded-lg bg-[#11111b] border border-[#1e1e2e]\"/><button onClick={send} className=\"px-6 py-2 rounded-lg bg-white text-black font-bold\">Send</button></div></div></div>);\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Landing AI Chat', description: 'Landing com AI chat 200 providers' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"landing-ai\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

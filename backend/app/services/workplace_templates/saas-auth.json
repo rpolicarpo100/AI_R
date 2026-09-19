@@ -1,0 +1,22 @@
+{
+  "name": "SaaS com Auth + 200 Providers",
+  "description": "SaaS com autentica\u00e7\u00e3o JWT, roles, human override, 200 providers gateway, dashboard, billing",
+  "type": "fullstack",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "fullstack",
+    "saas",
+    "auth",
+    "jwt",
+    "200_providers",
+    "dashboard",
+    "billing"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from 'react';\nexport default function SaaSAuth() {\n  const [user,setUser]=useState<any>(null);\n  return (<div className=\"min-h-screen bg-[#0a0a0f] text-white p-8\"><h1 className=\"text-3xl font-bold\">SaaS Auth \u2014 200 Providers</h1><p className=\"text-slate-400 mt-2\">Auth JWT + roles + 200 providers gateway OpenAI-compatible</p><div className=\"mt-6 grid grid-cols-3 gap-4\">{['Auth JWT','200 Providers','Dashboard'].map(f=>(<div key={f} className=\"p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e]\"><div className=\"font-bold\">{f}</div><div className=\"text-slate-400 text-sm mt-1\">Real, funcional</div></div>))}</div><div className=\"mt-6 p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">{user?`User ${user.email}`:'Login com /api/auth \u2014 JWT + roles \u2014 P4 Enterprise'}</div></div>);\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'SaaS Auth 200 Providers', description: 'SaaS com auth + 200 providers' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"saas-auth\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

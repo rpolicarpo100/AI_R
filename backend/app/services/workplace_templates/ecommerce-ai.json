@@ -1,0 +1,21 @@
+{
+  "name": "Ecommerce com AI Recomenda\u00e7\u00f5es",
+  "description": "Ecommerce com recomenda\u00e7\u00f5es AI usando 200 providers, embeddings, carrinho, checkout",
+  "type": "fullstack",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "fullstack",
+    "ecommerce",
+    "ai",
+    "recommendations",
+    "200_providers",
+    "embeddings"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from 'react';\nexport default function EcommerceAI() {\n  const [cart,setCart]=useState<any[]>([]);\n  return (<div className=\"min-h-screen bg-[#0a0a0f] text-white p-8\"><h1 className=\"text-3xl font-bold\">Ecommerce AI \u2014 200 Providers</h1><p className=\"text-slate-400 mt-2\">Recomenda\u00e7\u00f5es AI com 200 providers + embeddings + UAI image</p><div className=\"mt-6 grid grid-cols-4 gap-4\">{[1,2,3,4].map(i=>(<div key={i} className=\"p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e]\"><div className=\"h-32 bg-[#1e1e2e] rounded-lg\"></div><div className=\"mt-2 font-bold\">Produto {i}</div><div className=\"text-slate-400 text-sm\">AI recomenda com 200 providers</div><button onClick={()=>setCart([...cart, i])} className=\"mt-2 px-4 py-1 rounded bg-white text-black text-sm\">Add</button></div>))}</div><div className=\"mt-6 p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e]\">Carrinho: {cart.length} itens \u2014 AI recomenda\u00e7\u00f5es via /v1/chat/completions 200 providers</div></div>);\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Ecommerce AI', description: 'Ecommerce com AI recomenda\u00e7\u00f5es' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "package.json": "{\n  \"name\": \"ecommerce-ai\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

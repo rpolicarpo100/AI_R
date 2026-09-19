@@ -1,0 +1,23 @@
+{
+  "name": "Chat RAG com 200 Providers",
+  "description": "Chat com RAG usando 200 providers gateway OpenAI-compatible, embeddings, vector search, streaming",
+  "type": "fullstack",
+  "language": "typescript",
+  "framework": "nextjs",
+  "tags": [
+    "fullstack",
+    "chat",
+    "rag",
+    "200_providers",
+    "openai_compatible",
+    "embeddings",
+    "streaming"
+  ],
+  "files": {
+    "app/page.tsx": "\"use client\";\nimport { useState } from 'react';\nexport default function ChatRAG() {\n  const [q,setQ]=useState(''); const [a,setA]=useState(''); const [loading,setLoading]=useState(false);\n  const ask=async()=>{setLoading(true); const res=await fetch('/api/chat', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({messages:[{role:'user', content:q}], model:'groq/llama-3.3-70b-versatile'})}); const data=await res.json(); setA(data.choices?.[0]?.message?.content||JSON.stringify(data).slice(0,500)); setLoading(false);};\n  return (<div className=\"min-h-screen bg-[#0a0a0f] text-white p-8\"><h1 className=\"text-3xl font-bold\">Chat RAG \u2014 200 Providers</h1><p className=\"text-slate-400 mt-2\">RAG com gateway OpenAI-compatible \u2014 200 providers, 181 free, 938 models UAI image video</p><div className=\"mt-6 flex gap-2\"><input value={q} onChange={e=>setQ(e.target.value)} placeholder=\"Pergunta com RAG...\" className=\"flex-1 px-4 py-2 rounded-lg bg-[#11111b] border border-[#1e1e2e]\"/><button onClick={ask} disabled={loading} className=\"px-6 py-2 rounded-lg bg-white text-black font-bold disabled:opacity-50\">{loading?'...':'Ask'}</button></div><div className=\"mt-6 p-4 rounded-xl bg-[#11111b] border border-[#1e1e2e] min-h-[200px]\">{a||'Resposta RAG aparecer\u00e1 aqui...'}</div></div>);\n}\n",
+    "app/layout.tsx": "import './globals.css';\nexport const metadata = { title: 'Chat RAG 200 Providers', description: 'Chat RAG com 200 providers' };\nexport default function RootLayout({ children }: { children: React.ReactNode }) { return (<html lang=\"en\"><body>{children}</body></html>); }\n",
+    "app/globals.css": "@tailwind base;\n@tailwind components;\n@tailwind utilities;\nbody { background: #0a0a0f; color: #e2e8f0; }\n",
+    "app/api/chat/route.ts": "import { NextRequest, NextResponse } from 'next/server';\nexport async function POST(req: NextRequest) {\n  const body = await req.json();\n  // Proxy para AI Provider OS gateway OpenAI-compatible \u2014 200 providers 938 models UAI\n  const res = await fetch('http://localhost:8000/v1/chat/completions', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...body, stream:false})});\n  const data = await res.json();\n  return NextResponse.json(data);\n}\n",
+    "package.json": "{\n  \"name\": \"chat-rag\",\n  \"version\": \"0.1.0\",\n  \"private\": true,\n  \"scripts\": { \"dev\": \"next dev\", \"build\": \"next build\", \"start\": \"next start\" },\n  \"dependencies\": { \"next\": \"14.2.5\", \"react\": \"^18\", \"react-dom\": \"^18\" },\n  \"devDependencies\": { \"typescript\": \"^5\", \"@types/node\": \"^20\", \"@types/react\": \"^18\", \"tailwindcss\": \"^3.4.1\", \"autoprefixer\": \"^10.4.18\", \"postcss\": \"^8\" }\n}\n"
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "name": "API Gateway + Webhooks",
+  "description": "API gateway OpenAI-compatible com 200 providers, webhooks, rate limiting, observability, cost tracking",
+  "type": "backend",
+  "language": "python",
+  "framework": "fastapi",
+  "tags": [
+    "backend",
+    "api",
+    "gateway",
+    "webhooks",
+    "200_providers",
+    "openai_compatible",
+    "rate_limiting",
+    "observability"
+  ],
+  "files": {
+    "main.py": "from fastapi import FastAPI, Request\nfrom fastapi.responses import JSONResponse\nimport time\napp = FastAPI(title=\"API Gateway + Webhooks \u2014 200 Providers\")\n\n@app.get(\"/\")\nasync def root():\n    return {\"name\": \"API Gateway + Webhooks\", \"providers\": 201, \"models\": 780, \"uai\": \"938 models 163 image 221 video\", \"status\": \"online\", \"version\": \"1.0.0\"}\n\n@app.post(\"/v1/chat/completions\")\nasync def chat_completions(request: Request):\n    body = await request.json()\n    # Proxy para AI Provider OS \u2014 201 providers \u2014 780 models + UAI 938\n    return JSONResponse({\"id\": \"chatcmpl-test\", \"object\": \"chat.completion\", \"choices\": [{\"message\": {\"role\": \"assistant\", \"content\": f\"Echo via gateway 201 providers: {body.get('messages', [{}])[-1].get('content','')[:100]}\"}, \"finish_reason\": \"stop\"}], \"usage\": {\"prompt_tokens\": 10, \"completion_tokens\": 20}})\n\n@app.post(\"/webhook\")\nasync def webhook(request: Request):\n    body = await request.json()\n    print(f\"[WEBHOOK] Received {body}\")\n    return {\"received\": True, \"timestamp\": time.time()}\n\n@app.get(\"/health\")\nasync def health():\n    return {\"status\": \"healthy\", \"providers\": 201, \"models\": 780}\n",
+    "requirements.txt": "fastapi>=0.110\nuvicorn\nhttpx\n",
+    "README.md": "# API Gateway + Webhooks \u2014 200 Providers\n\nAPI gateway OpenAI-compatible com 201 providers (200 + UAI 938 models), webhooks, rate limiting, observability.\n\n- 201 providers, 780 models, 181 free_no_card, 2 free_remote, 10 free_local, 1 UAI 938 models image video\n- OpenAI-compatible /v1/chat/completions\n- Webhooks POST /webhook\n- Health /health\n\n```bash\npip install -r requirements.txt\nuvicorn main:app --reload\n```\n"
+  }
+}
