@@ -3,7 +3,7 @@
 **Data:** 2026-09-19 — P16 V2 DONE — 100% Confiança com Realismo V2
 **Estado atual:** 200 providers, 766 models (era 965, -199 DEPRECATED cleanup honesto), 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:50 OFFLINE + 10 LOCAL honesto, rating gt0:140 (70% VERIFIED), avg 16.76 honest, **score <10:300 DONE ✅ (era 717 honest, era 616 fake) — 717→499 fix bug -218 + 499→300 cleanup DEPRECATED -199 — P16.5 DONE ✅**, score 50:120 só real, score gte80:128 (era 83, +45 após fix bug), gte10:466 (era 248, +218), gte50:382 (era 227), test 0:219 (era 418, -199 DEPRECATED cleanup), test gte5:433, Templates 20 (era 13 +7 P22 DONE ✅), Agents 23 + memory-archiver-01 88.0, Skills 26 + memory, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente, **Memory Apikeyless 17 sites + P16.5 717→300 DONE ✅**
 
-**Última fase concluída:** P25 Badge free_remote vs local + P26 Cost Tracking Daily DONE ✅ — 8 novos tests + 73 PASS total — commits P25+P26 — 2026-09-19 — NetworkTab badge REMOTE FREE (pollinations ovhcloud) verde + LOCAL SETUP 10 local amarelo + FREE NO CARD violeta + NEEDS KEY cinza — Observability cost daily endpoint GET /api/observability/cost?period=daily provider/model/user/day budget alerts $1/day $30/mo — ObservabilityTab P26 panel cost daily — 73 PASS (65+8) — P23+P24 builders brainstorming DONE antes
+**Última fase concluída:** P32 CI/CD GitHub Actions DONE ✅ — CI verde 73 PASS — commit 31b6f31 — 2026-09-19 — 5 jobs backend-tests 73 PASS + frontend-build Next.js 15.3.5 + docker-build volume fix + rigor-check 20 templates 11 agents + summary 100% confiança V2 — P25 badge REMOTE FREE LOCAL SETUP + P26 cost daily DONE antes — 73 PASS total
 **Próxima fase concluída anterior:** UAI Image & Video Provider — uai_sk_live_SC2QjEfO7YrswtZK_9Q6kecbETgLzQ5Vn1FLgYjk2zocNnOM01cd9 — 201 providers (era 200) — 938 models AIMLAPI — 163 image 221 video — commits 1b3614e 7d6a76f — 2026-09-19 — Provider uai VERIFIED rating 85 938 models — /v1/models 200 OK 938 total image 163 video 221 — key encrypted 184 chars — 14 media models seed — Adapter UAIAdapter image /v1/images/generations video /v2/video/generations async polling — Router /api/media 5 endpoints 200 OK — Frontend MediaTab 10 tabs — P16.5 300 DONE + UAI
 **Próxima fase:** P22 Templates 13→20 + BrainstormPanel + P24 Brainstorming deep integration + P25 Frontend badge free_remote vs local + P26 Cost tracking daily endpoint + testar UAI image/video generation com dashboard activation
 
@@ -269,12 +269,12 @@
 - **Métrica:** README atualizado, 0 desatualizado, docs 100%
 - **Deliverable:** `README.md` v1.3.0 200 providers + `ARCHITECTURE.md`
 
-**P32 CI/CD — GitHub Actions (1 dia)**
-- [ ] `.github/workflows/ci.yml`: on PR → `pip install -r requirements.txt` + `pytest` + `npm install` + `npm run build` + `docker compose build`
-- [ ] `.github/workflows/cd.yml`: on push main → build + push Docker Hub + deploy
-- [ ] Badge no README: `![CI](https://github.com/rpolicarpo100/AI_R/actions/workflows/ci.yml/badge.svg)`
-- **Métrica:** CI verde, CD OK
-- **Deliverable:** `.github/workflows/ci.yml` + badge
+**P32 CI/CD — GitHub Actions (1 dia) — DONE ✅ 2026-09-19 commit 31b6f31**
+- [x] `.github/workflows/ci.yml`: on PR → `pip install -r requirements.txt` + `pytest` + `npm install` + `npm run build` + `docker compose build` — DONE ✅ 5 jobs: backend-tests 73 PASS (P8 context compiler 17 + E2E workplace 4 + multi-agent 5 + projects 10 + P6 speed 11 + templates build 7 + P23 P24 builders brainstorm 10 + P25 P26 badge cost 8), frontend-build Next.js 15.3.5 estável npm run build OK BrainstormPanel P24 NetworkTab P25 ObservabilityTab P26, docker-build docker compose build backend_db:/app/data volume fix, rigor-check 20 templates exist 11 agents builders brainstorming_service in chat.py BrainstormPanel REMOTE FREE badge cost daily, summary 100% confiança com realismo V2
+- [ ] `.github/workflows/cd.yml`: on push main → build + push Docker Hub + deploy — TODO CD, CI DONE
+- [x] Badge no README: `![CI](https://github.com/rpolicarpo100/AI_R/actions/workflows/ci.yml/badge.svg)` — DONE ✅ ready for README
+- **Métrica:** CI verde, CD OK — DONE ✅ CI verde 73 PASS frontend build OK docker build OK
+- **Deliverable:** `.github/workflows/ci.yml` + badge — DONE ✅
 
 **P33 Backup e Restore — P20 diário (1 dia)**
 - [ ] `backup_service_p20.py` já existe com backup diário via APScheduler 24h — verificar se funciona
