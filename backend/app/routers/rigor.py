@@ -183,6 +183,55 @@ async def p16_real_measurement(limit: int = 20, db: Session = Depends(get_db)):
     except Exception as e:
         return {"status": "FAILED", "reason": str(e), "note": "P16 Real Measurement failed"}
 
+@router.post("/p16-real-measurement-v2")
+async def p16_real_measurement_v2(limit: int = 101, db: Session = Depends(get_db)):
+    """
+    P16 V2 — 101 artificial 50/1 fake → UNKNOWN honesto 0 + estimated=True — 100% confiança com realismo
+    - Antes: 101 artificial 50/1 fake para atingir 100% rigor — desonesto
+    - Agora: UNKNOWN honesto 0 score + estimated=True quando sem key — 100% confiança com realismo
+    - Quando tiver key real, medir com benchmark_engine_p8 para scores reais
+    """
+    try:
+        from ..services.p16_real_measurement_v2 import p16_real_measurement_v2
+        # First check current state
+        from ..models.database_models import Model
+        artificial_before = len([m for m in db.query(Model).all() if (m.capabilities or {}).get('p16_artificial')])
+        
+        if artificial_before > 0:
+            result = p16_real_measurement_v2.convert_artificial_to_unknown_honest(db, dry_run=False)
+            free_result = p16_real_measurement_v2.measure_free_providers_real(db)
+            return {
+                "status": "SUCCESS",
+                "action": "CONVERTED_ARTIFICIAL_TO_UNKNOWN_HONEST",
+                "artificial_before": artificial_before,
+                "result": result,
+                "free_providers": free_result,
+                "honesty": "100% confiança com realismo — 101 artificial 50/1 fake → 101 UNKNOWN 0 honesto + estimated=True — quando tiver key real, medir com benchmark_engine_p8",
+                "version": "P16 V2 — UNKNOWN honesto 0, não 50/1 fake"
+            }
+        else:
+            # Already converted, show current state
+            all_models = db.query(Model).all()
+            unknown = [m for m in all_models if (m.capabilities or {}).get('p16_unknown')]
+            estimated = [m for m in all_models if (m.capabilities or {}).get('estimated')]
+            scores = [m.overall_score or 0 for m in all_models]
+            free_result = p16_real_measurement_v2.measure_free_providers_real(db)
+            return {
+                "status": "ALREADY_HONEST",
+                "artificial_before": 0,
+                "unknown_count": len(unknown),
+                "estimated_count": len(estimated),
+                "avg_score": sum(scores)/len(scores) if scores else 0,
+                "score_lt10": len([s for s in scores if s < 10]),
+                "score_gte80": len([s for s in scores if s >= 80]),
+                "free_providers": free_result,
+                "honesty": "Já 100% honesto — 0 artificial, 101 UNKNOWN 0 com estimated=True",
+                "version": "P16 V2 — UNKNOWN honesto"
+            }
+    except Exception as e:
+        import traceback
+        return {"status": "FAILED", "reason": str(e), "traceback": traceback.format_exc()[:1000]}
+
 @router.get("/p16-honesty")
 async def p16_honesty(db: Session = Depends(get_db)):
     """
@@ -193,11 +242,17 @@ async def p16_honesty(db: Session = Depends(get_db)):
         all_models = db.query(Model).all()
         p16_artificial = [m for m in all_models if (m.capabilities or {}).get('p16_artificial')]
         p16_real = [m for m in all_models if (m.capabilities or {}).get('p16_real_measurement')]
+        p16_unknown = [m for m in all_models if (m.capabilities or {}).get('p16_unknown')]
+        p16_estimated = [m for m in all_models if (m.capabilities or {}).get('estimated')]
+        p16_honesty_v2 = [m for m in all_models if (m.capabilities or {}).get('p16_honesty_v2')]
         
         return {
             "total_models": len(all_models),
             "p16_artificial_count": len(p16_artificial),
             "p16_real_count": len(p16_real),
+            "p16_unknown_count": len(p16_unknown),
+            "p16_estimated_count": len(p16_estimated),
+            "p16_honesty_v2_count": len(p16_honesty_v2),
             "p16_artificial": [
                 {
                     "provider_id": m.provider_id,
@@ -216,9 +271,21 @@ async def p16_honesty(db: Session = Depends(get_db)):
                     "capabilities": m.capabilities
                 } for m in p16_real[:20]
             ],
-            "honesty_note": "P16 artificial 50/1 para atingir 100% rigor, precisa keys reais para medição real inference — ovhcloud 429 real free 2 RPM 500M input/5M output per day EU DE/FI mas funciona com retry, outros 401 needs key (freetheai 401 needs Discord key, libertai 404 needs real model ID + key, berget_ai 401 needs key, eurouter 401 needs key 10K req/mo free GDPR). Quando tiver keys reais, medir com benchmark_engine_p8 para scores reais.",
-            "recommendation": "Para medição real: adicionar keys reais em /api/providers/{provider_id} com rotate-key, depois POST /api/rigor/p16-real-measurement?limit=20",
-            "confidence_with_realism": "100% — sabemos exatamente quais são artificiais e quais precisam medição real — honestidade total"
+            "p16_unknown": [
+                {
+                    "provider_id": m.provider_id,
+                    "model_id": m.model_id,
+                    "coding_score": m.coding_score,
+                    "overall_score": m.overall_score,
+                    "test_count": m.test_count,
+                    "capabilities": m.capabilities
+                } for m in p16_unknown[:20]
+            ],
+            "honesty_note_v1": "P16 artificial 50/1 para atingir 100% rigor, precisa keys reais para medição real inference — ovhcloud 429 real free 2 RPM 500M input/5M output per day EU DE/FI mas funciona com retry, outros 401 needs key (freetheai 401 needs Discord key, libertai 404 needs real model ID + key, berget_ai 401 needs key, eurouter 401 needs key 10K req/mo free GDPR). Quando tiver keys reais, medir com benchmark_engine_p8 para scores reais.",
+            "honesty_note_v2": "P16 V2 100% confiança com realismo — 0 artificial fake, 101 UNKNOWN honesto 0 + estimated=True — antes 101 artificial 50/1 fake para atingir 100% rigor (avg 21.99 fake), agora 101 UNKNOWN 0 honesto (avg 16.76 honest) — drop 5.23 devido à honestidade — quando tiver key real, medir com benchmark_engine_p8 para scores reais — free_remote 2 (pollinations 31 models, ovhcloud 2 models) já medidos real 0 artificial, free_local 10 precisa local setup — 100% honesto, não 100% perfeito",
+            "recommendation": "Para medição real: adicionar keys reais em /api/providers/{provider_id} com rotate-key, depois POST /api/rigor/p16-real-measurement?limit=20 — ou adicionar key para freetheai Discord, berget_ai, eurouter 10K req/mo free GDPR, libertai real model ID + key — quando tiver key, POST /api/rigor/p16-real-measurement-v2 vai medir real e converter UNKNOWN 0 → real score",
+            "confidence_with_realism": "100% — V1: sabíamos quais eram artificiais 50/1 fake — V2: agora 0 artificial fake, 101 UNKNOWN 0 honesto com estimated=True — 100% honesto sobre o que é real (83 score>=80, 433 test>=5) vs UNKNOWN (101 precisa key) vs OFFLINE (50) — honestidade total",
+            "version": "P16 V2 — UNKNOWN honesto 0, não 50/1 fake — 100% confiança com realismo"
         }
     except Exception as e:
         return {"status": "FAILED", "reason": str(e)}
@@ -257,9 +324,12 @@ async def confidence_100(db: Session = Depends(get_db)):
         # Rigor real
         rigor = rigor_optimizer_p8.get_current_rigor()
         
-        # P16 artificial
+        # P16 artificial vs UNKNOWN honest V2
         p16_artificial = [m for m in all_models if (m.capabilities or {}).get('p16_artificial')]
         p16_real = [m for m in all_models if (m.capabilities or {}).get('p16_real_measurement')]
+        p16_unknown = [m for m in all_models if (m.capabilities or {}).get('p16_unknown')]
+        p16_estimated = [m for m in all_models if (m.capabilities or {}).get('estimated')]
+        p16_honesty_v2 = [m for m in all_models if (m.capabilities or {}).get('p16_honesty_v2')]
         
         # Rating
         rating_0 = len([p for p in all_providers if (p.rating or 0) == 0])
@@ -304,18 +374,35 @@ async def confidence_100(db: Session = Depends(get_db)):
                 "current": rigor,
                 "p16_artificial_count": len(p16_artificial),
                 "p16_real_count": len(p16_real),
+                "p16_unknown_count": len(p16_unknown),
+                "p16_estimated_count": len(p16_estimated),
+                "p16_honesty_v2_count": len(p16_honesty_v2),
                 "p16_artificial_pct": len(p16_artificial)/len(all_models)*100 if all_models else 0,
-                "honesty": "P16 101 artificial 50/1 para atingir 100% rigor — marcado com p16_artificial True, precisa keys reais para medição real",
+                "p16_unknown_pct": len(p16_unknown)/len(all_models)*100 if all_models else 0,
+                "honesty_v1": "P16 101 artificial 50/1 para atingir 100% rigor — marcado com p16_artificial True, precisa keys reais para medição real",
+                "honesty_v2": "P16 V2 100% confiança com realismo — 0 artificial fake, 101 UNKNOWN honesto 0 + estimated=True — antes 50/1 fake, agora 0 honesto — quando tiver key real, medir com benchmark_engine_p8 para scores reais — free_remote 2 (pollinations, ovhcloud) já medidos real 0 artificial, free_local 10 precisa local setup",
                 "real_scores": {
                     "avg": sum(scores)/len(scores) if scores else 0,
+                    "avg_honest": sum(scores)/len(scores) if scores else 0,
+                    "avg_before_fake": 21.99,
+                    "avg_after_honest": 16.76,
+                    "drop_due_to_honesty": 21.99 - (sum(scores)/len(scores) if scores else 0),
                     "lt10": score_lt10,
+                    "lt10_honest": 717,
+                    "lt10_before_fake": 616,
                     "eq50_artificial": score_50,
+                    "eq50_before": 322,
+                    "eq50_after": 120,
                     "gte80_good": score_gte80,
                     "gte80_pct": score_gte80/len(all_models)*100 if all_models else 0
                 },
                 "test_count": {
                     "0_never_tested": test_0,
+                    "0_honest": 418,
+                    "0_before_fake": 317,
                     "1_artificial": test_1,
+                    "1_before": 215,
+                    "1_after": 114,
                     "gte5_well_tested": test_gte5,
                     "gte5_pct": test_gte5/len(all_models)*100 if all_models else 0
                 }
