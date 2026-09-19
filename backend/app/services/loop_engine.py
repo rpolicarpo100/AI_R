@@ -433,11 +433,20 @@ class LoopEngine:
             engine = BenchmarkEngine(adapter, provider, model)
             result = await engine.run_suite(api_key_inner, categories=["CODING", "SPEED"])
             
-            # Atualizar model com scores
-            model.coding_score = result["by_category"].get("CODING", {}).get("avg_score", 0)
-            model.speed_score = result["by_category"].get("SPEED", {}).get("avg_score", 0)
-            model.overall_score = result["overall_score"]
-            model.confidence_score = result["confidence"]
+            # Atualizar model com scores — P16.5 FIX: não sobrescrever overall com 0, usar or e recalc honesto
+            new_coding = result["by_category"].get("CODING", {}).get("avg_score", 0) or model.coding_score
+            new_speed = result["by_category"].get("SPEED", {}).get("avg_score", 0) or model.speed_score
+            new_overall = result["overall_score"] or model.overall_score
+            # P16.5 — Se overall 0 mas category >0, recalc mean não-zero honesto
+            if new_overall == 0:
+                scores = [s for s in [new_coding, new_speed, model.json_score, model.reasoning_score, model.tool_calling_score] if s and s > 0]
+                if scores:
+                    import statistics
+                    new_overall = round(statistics.mean(scores), 1)
+            model.coding_score = new_coding
+            model.speed_score = new_speed
+            model.overall_score = new_overall
+            model.confidence_score = result["confidence"] or model.confidence_score
             model.test_count += result["total_tests"]
             model.status = ModelStatus.VERIFIED if result["overall_success_rate"] > 50 else ModelStatus.DEGRADED
             model.last_verified = datetime.now(timezone.utc)

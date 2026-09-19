@@ -370,6 +370,8 @@ from .routers import brainstorm as brainstorm_router
 app.include_router(brainstorm_router.router, prefix=settings.API_PREFIX)  # /api/brainstorm - Brainstorming antes de construir/responder — mais perto do objetivo final
 from .routers import memory as memory_router
 app.include_router(memory_router.router, prefix=settings.API_PREFIX)  # /api/memory - Apikeyless Memory — arquiva sites apikeyless para acesso rápido e análises rápidas — continuamente aumentado, auditado, rating e categoria
+from .routers import p16_5 as p16_5_router
+app.include_router(p16_5_router.router, prefix=settings.API_PREFIX)  # /api/p16-5 - P16.5 Overall <10 de 717→300 — fix bug + cleanup + benchmark
 
 @app.get("/")
 @limiter.limit("100/minute")
