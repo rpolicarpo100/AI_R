@@ -52,6 +52,12 @@ from .routers import p17_lean as p17_lean_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
+    # Import memory models so Base creates table
+    try:
+        from .models import memory_models
+        print("[MEMORY] ApikeylessMemory model imported for table creation")
+    except Exception as e:
+        print(f"[MEMORY] Import failed: {e}")
     init_db()
     db = SessionLocal()
     try:
@@ -171,6 +177,14 @@ async def lifespan(app: FastAPI):
                 print(f"[P15 200] No new P15 200 providers needed — total {db.query(Provider).count()} free_no_card {len([p for p in db.query(Provider).all() if (p.capabilities or {}).get('free_no_card')])}")
         except Exception as e:
             print(f"[P15 200] Seed P15 200 providers failed: {e}")
+
+        # Memory — Apikeyless Archive — seed 15 sites reais verificados
+        try:
+            from .services.apikeyless_memory_service import apikeyless_memory_service
+            mem_result = apikeyless_memory_service.seed_memory(db)
+            print(f"[MEMORY] Seed result: {mem_result}")
+        except Exception as e:
+            print(f"[MEMORY] Seed failed (optional): {e}")
 
         # P20 — Database backup automático
         try:
@@ -354,6 +368,8 @@ from .routers import context as context_router
 app.include_router(context_router.router)  # /api/context - P8 Context Compiler P0+P1+P2
 from .routers import brainstorm as brainstorm_router
 app.include_router(brainstorm_router.router, prefix=settings.API_PREFIX)  # /api/brainstorm - Brainstorming antes de construir/responder — mais perto do objetivo final
+from .routers import memory as memory_router
+app.include_router(memory_router.router, prefix=settings.API_PREFIX)  # /api/memory - Apikeyless Memory — arquiva sites apikeyless para acesso rápido e análises rápidas — continuamente aumentado, auditado, rating e categoria
 
 @app.get("/")
 @limiter.limit("100/minute")

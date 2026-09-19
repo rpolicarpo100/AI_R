@@ -266,6 +266,16 @@ BASE_SKILLS = [
         "outputs": ["interpretations", "approaches", "best_approach", "mvp", "questions"],
         "security_level": "LOW",
     },
+    {
+        "skill_id": "memory",
+        "name": "Apikeyless Memory — Arquiva sites apikeyless para acesso rápido",
+        "description": "Melhora memória da AI, arquivando sites apikeyless (pollinations, ovhcloud, freetheai, berget, opper, eurouter, greenpt, cloudflare, huggingface, jina, voyage, etc) que permita futuro acesso mais rápido e análises mais rápidas — repositório continuamente aumentado, auditado, rating e categoria — 15 seed + continuous increase",
+        "category": "MEMORY",
+        "capabilities": ["memory", "archiving", "rating", "category", "fast_access", "analysis", "auditing"],
+        "inputs": ["url", "site_data", "search_query"],
+        "outputs": ["archived_content", "rating", "category", "search_results"],
+        "security_level": "LOW",
+    },
 ]
 
 # Agentes base - cada um com role, skills, competencies iniciais medidas
@@ -502,6 +512,17 @@ BASE_AGENTS = [
         "tools": ["brainstorm", "ideation", "intent_detection", "template_matching", "mvp_definition"],
         "permissions": ["read", "plan", "brainstorm", "analyze"],
         "rating": 92.0,
+    },
+    {
+        "agent_id": "memory-archiver-01",
+        "name": "Memory Archiver Agent",
+        "role": AgentRole.AUDIT,
+        "description": "Arquiva sites apikeyless para acesso rápido e análises rápidas — repositório continuamente aumentado, auditado, rating e categoria — 15 seed + 17 total após increase — pollinations, ovhcloud, freetheai, berget, opper, eurouter, greenpt, cloudflare, huggingface, jina, voyage, etc",
+        "skills": ["memory", "intent_analysis", "prompt_engineering"],
+        "competencies": {"memory": 90, "archiving": 90, "rating": 85, "category": 85, "fast_access": 90, "analysis": 85, "auditing": 85},
+        "tools": ["archive", "audit", "search", "rating", "category"],
+        "permissions": ["read", "archive", "audit", "search"],
+        "rating": 88.0,
     },
 ]
 
