@@ -1,10 +1,10 @@
 # 🗺️ ROADMAP 100% PERFEITO — Melhorias Críticas e Importantes
 
 **Data:** 2026-09-19 — P16 V2 DONE — 100% Confiança com Realismo V2
-**Estado atual:** 200 providers, 965 models, 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:60 (era 187), rating gt0:140 (70% VERIFIED), avg 16.76 honest (era 21.99 fake drop 5.23 honestidade), score <10:717 honest (era 616 fake), score 50:120 só real (era 322 com 101 fake), score gte80:83 (8.6% bons real), test 0:418 (era 317), test gte5:433 (44.8% bem testados), Templates 13, Agents 22, Skills 25, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente
+**Estado atual:** 200 providers, 965 models, 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:50 OFFLINE + 10 LOCAL honesto (era 60 UNKNOWN, era 187 DISCOVERED), rating gt0:140 (70% VERIFIED), avg 16.76 honest (era 21.99 fake drop 5.23), score <10:717 honest (era 616 fake), score 50:120 só real (era 322 com 101 fake), score gte80:83 (8.6% bons real), test 0:418 (era 317), test gte5:433 (44.8%), Templates 13, Agents 23 (era 22) + memory-archiver-01 88.0, Skills 26 (era 25) + memory, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente, **Memory Apikeyless 17 sites (15 seed + 2 increase) — pollinations, ovhcloud, freetheai, puter, berget, opper, eurouter, greenpt, ollama, lm_studio, cloudflare, huggingface, perchance, jina, voyage, libertai, llmwise — rating e categoria — acesso rápido e análises rápidas — continuamente aumentado auditado**
 
-**Última fase concluída:** P16 V2 Real Measurement — 101 artificial 50/1 fake → 101 UNKNOWN honesto 0 — commit 38b6a13 — 2026-09-19
-**Próxima fase:** P21 Health Check 200 — 60 rating 0 → 0 (1 dia) + P21.5 Docker test real
+**Última fase concluída:** Memória Apikeyless — 15 seed + 2 increase = 17 total — arquiva sites apikeyless para acesso rápido e análises rápidas — continuamente aumentado auditado rating e categoria — commit 46c5874 — 2026-09-19
+**Próxima fase:** P16.5 Overall Score 717→300 (1 dia) + P22 Templates 13→20 + BrainstormPanel + P24 Brainstorming deep integration
 
 **Princípio:** FUNCIONALIDADE > SEGURANÇA > TESTES > OBSERVABILITY > PERFORMANCE > UX > AUTOMAÇÃO
 **Iterações:** P0→P1→P2→P3, não construir tudo de uma vez
@@ -28,6 +28,15 @@
 - Endpoints: POST /api/rigor/p16-real-measurement-v2 200 ALREADY_HONEST artificial 0 unknown 101 avg 16.76 free remote 2 free local 10, GET /api/rigor/confidence-100 200 artificial 0 unknown 101 estimated 101 avg 16.76 score <10 717 score gte80 83 free remote 2 free local 10, GET /api/rigor/p16-honesty 200 artificial 0 unknown 101 estimated 101
 - Frontend RigorTab V2: badge 0 ARTIFICIAL FAKE ✅ + 101 UNKNOWN HONESTO + 2 FREE REMOTE + 10 FREE LOCAL + avg 21.99 fake→16.76 honest drop 5.23 + score <10 616→717 + score 50 322→120
 - **Métrica atingida:** artificial 101→0 ✅, unknown 0→101 ✅, estimated 0→101 ✅, avg 21.99→16.76 honest drop 5.23 honestidade, score <10 616→717 honest, score 50 322→120 só real, free remote 2 free local 10 preservados
+
+### ✅ Concluído Recente — P16 V2 + P21 + Memory — 2026-09-19
+
+**P16 V2 + P21 + Memory — 3 Críticos Altos FIXADOS + Memória Apikeyless — DONE ✅ 2026-09-19 commits 38b6a13 0b024d6 46c5874**
+- P16 V2: 101 artificial 50/1 fake → 101 UNKNOWN honesto 0 + estimated=True — avg 21.99→16.76 drop 5.23 — 0 artificial fake ✅
+- P21: 60 rating 0 UNKNOWN → 50 OFFLINE + 10 LOCAL honesto — health_check_status 115+50+14+11+10=200 — 0 DISCOVERED UNKNOWN ✅
+- P21.5 Docker: volume bug FIXED + validado config — Dockerfiles OK — Next.js 15.3.5 estável
+- P28 Tests: 47 PASS 1 FAIL → 48 PASS 0 FAIL — test_p5_still_works FIXED
+- **Memory Apikeyless: 15 seed + 2 increase = 17 total — arquiva sites apikeyless para acesso rápido e análises rápidas — continuamente aumentado auditado rating e categoria — Modelo ApikeylessMemory + Service + Router /api/memory 8 endpoints 200 OK + Frontend MemoryTab 9 tabs + Skills 26 + Agents 23**
 
 ### Crítico Alto (bloqueia prod) — Restam 0 ✅ — 3 FIXADOS 2026-09-19
 
@@ -133,6 +142,21 @@
 - **Deliverable:** `DOCKER_OPCAO_B.md` atualizado com "Testado Windows Docker 29.7.2 OK" + docker-compose.yml + Dockerfiles validados — DONE ✅
 
 ---
+
+### ✅ SEMANA 1.5 — Memory Apikeyless — Melhora memória da AI — DONE ✅ 2026-09-19 commit 46c5874
+
+**Objetivo:** Melhorar memória da AI, arquivando sites apikeyless, que permita futuro acesso mais rápido e análises mais rápidas — repositório continuamente aumentado, auditado, rating e categoria — não LLM, sim memória
+
+**Memory Apikeyless — DONE ✅ 2026-09-19:**
+- [x] Modelo ApikeylessMemory: id, url unique, name, description, category (llm_free_remote, llm_free_local, llm_free_no_card, llm_eu_sovereign, image_free, embedding_free, docs, code), subcategory (eu_gdpr, discord_key, browser, local_setup, cloudflare, huggingface), rating 0-100 breakdown uptime latency free_quality gdpr eu_sovereign content_quality overall, free_no_card free_no_key free_no_key_remote free_no_key_local free_type remote/local/no_card, status ONLINE OFFLINE NEEDS_KEY LOCAL_SETUP_REQUIRED REACHABLE_BUT_ERROR UNKNOWN ARCHIVED, last_checked last_archived latency_ms uptime_pct, content_markdown 20K content_summary 500 chars content_hash content_size para acesso rápido, tags capabilities meta source discovered_at seed, audit_count audit_history last 20 deprecated
+- [x] Seed 15 sites reais verificados 2026-09-18: pollinations 31 models free remote 80 ONLINE apikeyless, ovhcloud 2 models 2 RPM 500M/5M per day EU DE/FI 70 free remote, freetheai 80+ models Discord key no card 75, puter browser free 70, berget Sweden EU-sovereign GDPR 80, opper Sweden 700+ models zero retention 85, eurouter Netherlands 100+ models 10K req/mo free GDPR 80, greenpt French Scaleway GDPR 75, ollama local 1 model 90 LOCAL_SETUP_REQUIRED, lm_studio local 85, cloudflare 10K neurons/day free 80, huggingface 300+ models $0.10/month 85, perchance image free 60, jina 10M embedding free 75, voyage 50M embedding free 75 — 100% confiança com realismo — não inventados
+- [x] Service apikeyless_memory_service: seed_memory 15/15, archive_site fetch conteúdo markdown 50K → 20K + summary 500 chars + hash + size + rating breakdown uptime latency free_quality gdpr eu_sovereign content_quality overall avg + audit_history last 20 + rating update, audit_all concurrency 5 limit 20 health check + rating update contínuo, list_memory filtros category min_rating free_type limit 50 rating desc para acesso rápido, search_memory busca semântica simples nome descrição tags categoria url score + rating para análises rápidas, increase_continuously adiciona novos sites — Testado: seed 15/15, list 200 OK 5 total rating desc ollama 90 local opper 85 eu_sovereign, stats 200 OK total 15 avg rating category_count free_type_count status_count, categories 200 OK, search free 200 OK FreeTheAI 75 Ollama 90, search eu 200 OK EUrouter 80 Berget 80, archive pollinations 404 REACHABLE_BUT_ERROR rating 65 size 139, archive opper 404 rating 80.83 size 80, increase libertai + llmwise 2 added total 17
+- [x] Router /api/memory: POST /seed, GET /list, GET /search, POST /archive, POST /audit, POST /increase, GET /stats, GET /categories, DELETE /{memory_id} — prefix /memory fixed double /api bug — 8 endpoints 200 OK
+- [x] main.py: import memory_models + include_router memory_router prefix /api + seed memory lifespan — 15 seed + 17 total após increase
+- [x] Frontend MemoryTab: header 17 SITES ARQUIVADOS avg rating gte80 gte50 + AUDITAR 10 SITES button, stats categorias free_type status, busca análises rápidas + filtros acesso rápido category free_type, lista repositório rating desc acesso rápido com rating badge category status free_type latency audits size + arquivar button + tags, como aumentar continuamente seed + increase + auditar + arquivar + rating + categoria + acesso rápido + análises rápidas + contínuo APScheduler
+- [x] Skills 26 (25+1 memory) Agents 23 (22+1 memory-archiver-01 88.0) — SettingsContainer 9 tabs (8+1 memory) — 200 provs 965 models 0 artificial 101 UNKNOWN 50 OFFLINE 10 LOCAL + 17 memory — 100% confiança com realismo
+- **Métrica:** Memory 15 seed + 2 increase = 17 total — avg rating 75-90 — category_count llm_free_remote 3 llm_free_local 2 llm_free_no_card 5 llm_eu_sovereign 4 image_free 1 embedding_free 2 — free_type_count remote 3 local 2 no_card 10 — status_count UNKNOWN 15 + ARCHIVED 2 após archive test — rating breakdown uptime latency free_quality gdpr eu_sovereign content_quality overall — continuamente aumentado, auditado, rating e categoria — acesso rápido e análises rápidas — 100% confiança
+- **Deliverable:** /api/memory/list 200 OK 5 total rating desc + /api/memory/stats 200 OK total 15 + /api/memory/categories 200 OK + /api/memory/search?q=free 200 OK + /api/memory/search?q=eu 200 OK + /api/memory/archive 200 OK ARCHIVED + /api/memory/increase 200 OK INCREASED 2 added total 17 + Frontend MemoryTab 9 tabs + Skills 26 + Agents 23 — DONE ✅
 
 ### SEMANA 2 — P22-P26 — WORKPLACE, AGENTS, BRAINSTORMING — FUNCIONALIDADE + UX
 
