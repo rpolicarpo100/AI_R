@@ -188,11 +188,12 @@ async def health_check_all_200(db: Session, limit: int = 50, concurrency: int = 
                     if (provider.rating or 0) == 0:
                         provider.rating = result['rating']
                 
-                # Atualiza capabilities com free_no_key_remote vs local separação — FIX flag_modified
+                # Atualiza capabilities com free_no_key_remote vs local separação — FIX flag_modified + health_status consistency
                 caps = dict(provider.capabilities or {})
                 caps['free_no_key_remote'] = result['free_no_key_remote']
                 caps['free_no_key_local'] = result['free_no_key_local']
                 caps['health_check_real'] = result['real_test']
+                caps['health_status'] = result['status']  # Consistency: health_status + health_check_status both
                 caps['health_check_status'] = result['status']
                 caps['health_check_reason'] = result['reason']
                 caps['health_check_latency_ms'] = result['latency_ms']
