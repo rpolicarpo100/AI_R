@@ -10,7 +10,7 @@ export function ChatContainer({
   chatMessages, chatLoading, streamEnabled, setStreamEnabled,
   chatMode, setChatMode, selectedModelId, setSelectedModelId, distinctModels,
   workplaceOpen, setWorkplaceOpen, projectsCount,
-  chatInput, setChatInput, onSend, onSave, chatInputRef,
+  chatInput, setChatInput, onSend, onSave, onCreateFromTemplate, chatInputRef,
   projects
 }: any) {
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -47,7 +47,7 @@ export function ChatContainer({
       {chatMode === "manual" && (
         <ChatModelSelect selectedModelId={selectedModelId} setSelectedModelId={setSelectedModelId} distinctModels={distinctModels} />
       )}
-      <ChatMessages messages={chatMessages} loading={chatLoading} streamEnabled={streamEnabled} onSave={onSave} chatEndRef={chatEndRef} />
+      <ChatMessages messages={chatMessages} loading={chatLoading} streamEnabled={streamEnabled} onSave={onSave} onCreateFromTemplate={onCreateFromTemplate} chatEndRef={chatEndRef} />
       {showCommands && filteredCommands.length > 0 && (
         <CommandsPalette filter={commandFilter} commands={filteredCommands} onSelect={(cmd: string) => { setChatInput(cmd); setShowCommands(false); }} />
       )}

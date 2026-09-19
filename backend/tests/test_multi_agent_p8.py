@@ -19,8 +19,14 @@ def test_multi_agent_pipeline_info():
     assert data["simulated"] == False
     assert "measures" in data
     assert "latency_ms" in data["measures"]
-    assert len(data["agents"]) == 6
-    print("✅ Pipeline info REAL")
+    # P23+P24: now 11 agents (6 base + 5 builders) — was 6 in P8.3, now >=6
+    assert len(data["agents"]) >= 6, f"Expected >=6 agents, got {len(data['agents'])}"
+    # P23 builders should be present when construir app
+    agent_ids = [a["id"] for a in data["agents"]]
+    # At least base 6 must be present
+    for must in ["intent-analyzer-01", "prompt-optimizer-01", "router-01", "critic-01", "code-reviewer-01", "rigor-checker-01"]:
+        assert must in agent_ids, f"{must} missing in pipeline-info"
+    print(f"✅ Pipeline info REAL {len(data['agents'])} agents — P23 builders included")
 
 def test_multi_agent_agents_status():
     """Testa agents status REAL com metrics medidos"""

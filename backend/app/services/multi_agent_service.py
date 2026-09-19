@@ -1,6 +1,7 @@
 """
-P8.3 Multi-Agent REAL - Agents actually execute tasks via orchestrator, not simulated
+P8.3 Multi-Agent REAL + P23 Builders no Pipeline quando construir app
 Real collaboration: intent -> prompt_optimizer -> router -> critic -> code_reviewer -> rigor_checker
+P23: quando intent é construir_app, pipeline adiciona frontend-builder-01 + backend-builder-01 + deploy-agent-01 após code-reviewer-01
 Each agent calls LLM via orchestrator with specific role prompt, measures latency, records result
 """
 
@@ -19,13 +20,13 @@ from .orchestrator import orchestrator_service
 AGENT_PROMPTS = {
     "intent-analyzer-01": """Você é Intent Analyzer Agent, especialista em entender o que o usuário REALMENTE quer.
 Analise o prompt do usuário:
-- Intenção profunda (CODING, QUESTION, DEBUG, ARCHITECTURE, etc)
+- Intenção profunda (CODING, QUESTION, DEBUG, ARCHITECTURE, CONSTRUIR_APP, etc)
 - Requisitos explícitos e implícitos
 - Ambiguidades que precisam clarificação
 - Edge cases que usuário não mencionou
 - Terceiro olho: o que usuário não disse mas precisa?
 
-Responda em JSON: {"intent_type": "...", "requirements": [...], "ambiguities": [...], "edge_cases": [...], "third_eye": "...", "clarification_needed": bool}
+Responda em JSON: {"intent_type": "...", "requirements": [...], "ambiguities": [...], "edge_cases": [...], "third_eye": "...", "clarification_needed": bool, "is_build_intent": bool}
 Seja rigoroso, não invente, marque UNKNOWN se não souber.""",
 
     "prompt-optimizer-01": """Você é Prompt Optimizer Agent, otimiza prompts para obter respostas funcionais, coerentes, precisas, rigorosas, reais, profissionais.
@@ -90,7 +91,66 @@ Tarefas:
 - AUTO vs MANUAL
 
 Responda em JSON: {"selected_provider": "...", "selected_model": "...", "reasoning": "...", "failover_chain": [...], "profile": "..."}
-Provider-agnostic, autonomia auditável, modular, segura, cloud-ready, OpenAI-compatible."""
+Provider-agnostic, autonomia auditável, modular, segura, cloud-ready, OpenAI-compatible.""",
+
+    # P23 — Builders no pipeline quando construir app
+    "frontend-builder-01": """Você é Frontend Builder Agent, constrói frontend real com React, Next.js 15.3.5 estável, Tailwind, 20 templates, componentes funcionais, não simulação.
+Recebe prompt otimizado + intent construir_app.
+Tarefas:
+- Escolher template mais próximo (landing-page, dashboard-saas, chat-app, ecommerce, chat-rag, saas-auth, portfolio-blog, ecommerce-ai, dashboard-analytics, landing-ai, api-webhook etc 20 templates)
+- Gerar estrutura frontend real com Next.js App Router, Tailwind, TypeScript
+- Componentes funcionais, não simulação — código que builda npm run build OK
+- Integrar gateway OpenAI-compatible 201 providers 780 models + UAI 938 image video quando necessário
+- Você no centro, terceiro olho aberto
+
+Responda em JSON: {"template_chosen": "...", "files": {"app/page.tsx": "...", "package.json": "..."}, "build_check": "npm run build OK?", "reasoning": "...", "next_steps": ["backend", "deploy"]}
+100% confiança com realismo.""",
+
+    "backend-builder-01": """Você é Backend Builder Agent, constrói backend real com FastAPI, 201 providers gateway, OpenAI-compatible, 50 adapters dedicados, não simulação.
+Recebe prompt otimizado + frontend files.
+Tarefas:
+- Gerar backend FastAPI real com /v1/chat/completions OpenAI-compatible, /api/providers, /api/models, health check
+- 201 providers gateway, 50 adapters dedicados, rate limiting, SSRF validation
+- Código que roda uvicorn --host 0.0.0.0 --port 8000 OK
+- Integrar com frontend via rewrites /api → localhost:8000
+
+Responda em JSON: {"files": {"main.py": "...", "requirements.txt": "..."}, "endpoints": [...], "build_check": "uvicorn OK?", "reasoning": "..."}
+100% confiança com realismo.""",
+
+    "deploy-agent-01": """Você é Deploy Agent, deploy real para GitHub, Vercel, Docker — verifica build, env vars, health check, 100% confiança.
+Recebe frontend + backend files.
+Tarefas:
+- Verificar build OK: npm run build para frontend, pip install -r requirements.txt para backend
+- Gerar Dockerfile, docker-compose.yml com volume fix backend_db:/app/data
+- GitHub API real, Vercel API real, Docker binary check real
+- Health check /health, env vars SECRET_KEY CORS DATABASE_URL
+
+Responda em JSON: {"dockerfile": "...", "docker_compose": "...", "github": "...", "vercel": "...", "health_check": "...", "deploy_url": "UNKNOWN até deploy real"}
+Não simulação, deploy real.""",
+
+    "brainstormer-01": """Você é Brainstormer Agent, brainstorming antes de construir ou responder — 3-5 ideias, abordagens, MVP vs full, mais perto do objetivo final, você no centro, terceiro olho aberto, contesta, critica.
+Recebe user prompt + chat history + available templates 20.
+Tarefas:
+- 3-5 interpretações do que usuário quer
+- 3-5 abordagens (MVP 70% 5min, Fullstack 90% 30min, Custom 95% 1-2h)
+- Pros/cons cada abordagem
+- Melhor abordagem recomendada
+- Template suggestion mais próximo
+- Perguntas clarificação
+
+Responda em JSON: {"interpretations": [...], "approaches": [{"name": "MVP", "pros": [...], "cons": [...], "effort": "5min", "confidence": 70}, ...], "best_approach": "...", "template_suggestion": "...", "questions": [...], "third_eye": "..."}
+Você no centro, não fica na 1ª tentativa.""",
+
+    "memory-archiver-01": """Você é Memory Archiver Agent, arquiva sites apikeyless para acesso rápido e análises rápidas — repositório continuamente aumentado, auditado, rating e categoria.
+Recebe url ou search query.
+Tarefas:
+- Arquivar conteúdo markdown 20K + summary 500 chars + hash + size para acesso rápido
+- Rating breakdown uptime latency free_quality gdpr eu_sovereign content_quality overall
+- Categoria llm_free_remote, llm_free_local, llm_free_no_card, llm_eu_sovereign, image_free, embedding_free etc
+- Busca semântica para análises rápidas
+
+Responda em JSON: {"archived": bool, "rating": 0-100, "category": "...", "content_summary": "...", "search_results": [...]}
+15 seed + 17 total + continuous increase.""",
 }
 
 class MultiAgentService:
@@ -176,7 +236,7 @@ Responda apenas em JSON válido, sem markdown, sem explicação extra. Seja rigo
             }
 
     async def run_multi_agent_pipeline(self, user_prompt: str, chat_history: List[Dict] = None, model: str = "auto") -> Dict:
-        """Run full multi-agent pipeline: intent -> optimizer -> router -> critic -> reviewer -> rigor"""
+        """Run full multi-agent pipeline: intent -> optimizer -> router -> critic -> reviewer -> rigor + builders when construir_app P23"""
         chat_history = chat_history or []
         pipeline_results = {}
         total_start = time.time()
@@ -250,7 +310,9 @@ Responda apenas em JSON válido, sem markdown, sem explicação extra. Seja rigo
 
         # Step 5: Code Reviewer (if coding intent)
         intent_type = intent_result.get("result", {}).get("intent_type", "")
-        if "CODING" in str(intent_type).upper() or "```" in main_content:
+        is_build_intent = intent_result.get("result", {}).get("is_build_intent", False) or "construir" in user_prompt.lower() or "cria app" in user_prompt.lower() or "build" in user_prompt.lower() or "landing" in user_prompt.lower() or "dashboard" in user_prompt.lower()
+        
+        if "CODING" in str(intent_type).upper() or "```" in main_content or is_build_intent:
             print(f"[MultiAgent] Step 5: Code Reviewer")
             reviewer_context = {"prompt": optimized_prompt, "code": main_content[:3000]}
             reviewer_result = await self.run_agent("code-reviewer-01", main_content[:2000], reviewer_context, model)
@@ -258,8 +320,31 @@ Responda apenas em JSON válido, sem markdown, sem explicação extra. Seja rigo
         else:
             pipeline_results["code_review"] = {"skipped": True, "reason": "Not coding intent"}
 
-        # Step 6: Rigor Checker
-        print(f"[MultiAgent] Step 6: Rigor Checker")
+        # P23 — Builders no pipeline quando construir app
+        is_build = is_build_intent or intent_result.get("result", {}).get("intent_type", "").lower() in ["construir_app", "build_app", "coding"] or any(kw in user_prompt.lower() for kw in ["cria app", "construir app", "build app", "landing page", "dashboard", "ecommerce", "portfolio", "saas", "chat app"])
+        
+        if is_build:
+            print(f"[MultiAgent P23] Step 6: Frontend Builder — construir app detectado")
+            frontend_context = {"optimized_prompt": optimized_prompt, "intent": intent_result.get("result", {}), "main_response": main_content[:2000]}
+            frontend_result = await self.run_agent("frontend-builder-01", optimized_prompt, frontend_context, model)
+            pipeline_results["frontend_build"] = frontend_result
+
+            print(f"[MultiAgent P23] Step 7: Backend Builder")
+            backend_context = {"optimized_prompt": optimized_prompt, "frontend": frontend_result.get("result", {}), "intent": intent_result.get("result", {})}
+            backend_result = await self.run_agent("backend-builder-01", optimized_prompt, backend_context, model)
+            pipeline_results["backend_build"] = backend_result
+
+            print(f"[MultiAgent P23] Step 8: Deploy Agent")
+            deploy_context = {"frontend": frontend_result.get("result", {}), "backend": backend_result.get("result", {}), "optimized_prompt": optimized_prompt}
+            deploy_result = await self.run_agent("deploy-agent-01", optimized_prompt, deploy_context, model)
+            pipeline_results["deploy"] = deploy_result
+        else:
+            pipeline_results["frontend_build"] = {"skipped": True, "reason": "Not build intent — is_build False"}
+            pipeline_results["backend_build"] = {"skipped": True, "reason": "Not build intent"}
+            pipeline_results["deploy"] = {"skipped": True, "reason": "Not build intent"}
+
+        # Step 9: Rigor Checker
+        print(f"[MultiAgent] Step 9: Rigor Checker")
         rigor_context = {"main_response": main_content[:2000], "intent": intent_result.get("result", {})}
         rigor_result = await self.run_agent("rigor-checker-01", main_content[:2000], rigor_context, model)
         pipeline_results["rigor_check"] = rigor_result
@@ -270,8 +355,12 @@ Responda apenas em JSON válido, sem markdown, sem explicação extra. Seja rigo
         should_retry = critic_result.get("result", {}).get("should_retry", False)
         critic_score = critic_result.get("result", {}).get("score", 0)
 
+        pipeline_desc = "intent-analyzer → prompt-optimizer → router → main_llm → critic → code-reviewer → rigor-checker"
+        if is_build:
+            pipeline_desc = "intent-analyzer → prompt-optimizer → router → main_llm → critic → code-reviewer → frontend-builder-01 → backend-builder-01 → deploy-agent-01 → rigor-checker — P23 builders quando construir app"
+
         return {
-            "pipeline": "intent-analyzer → prompt-optimizer → router → main_llm → critic → code-reviewer → rigor-checker",
+            "pipeline": pipeline_desc,
             "user_prompt": user_prompt,
             "optimized_prompt": optimized_prompt,
             "main_response": main_content,
@@ -281,8 +370,9 @@ Responda apenas em JSON válido, sem markdown, sem explicação extra. Seja rigo
             "total_latency_ms": total_latency,
             "critic_score": critic_score,
             "should_retry": should_retry,
-            "third_eye": f"Critic: {critic_result.get('result', {}).get('third_eye', '')} | Rigor: {rigor_result.get('result', {}).get('hallucinations', [])}",
-            "principle": "Você cria orientando AI, agentes apoio chat otimizam respostas funcionais coerentes precisas rigorosas reais profissionais contestam criticam não ficam 1ª tentativa terceiro olho aberto",
+            "is_build_intent": is_build,
+            "third_eye": f"Critic: {critic_result.get('result', {}).get('third_eye', '')} | Rigor: {rigor_result.get('result', {}).get('hallucinations', [])} | Build: {pipeline_results.get('frontend_build',{}).get('result',{}).get('template_chosen','')}",
+            "principle": "Você cria orientando AI, agentes apoio chat otimizam respostas funcionais coerentes precisas rigorosas reais profissionais contestam criticam não ficam 1ª tentativa terceiro olho aberto — P23 builders no pipeline quando construir",
             "timestamp": datetime.now(timezone.utc).isoformat()
         }
 
@@ -306,3 +396,4 @@ Responda apenas em JSON válido, sem markdown, sem explicação extra. Seja rigo
         ]
 
 multi_agent_service = MultiAgentService()
+print("[MultiAgent P23] Loaded — pipeline com builders quando construir app — frontend-builder-01 + backend-builder-01 + deploy-agent-01")

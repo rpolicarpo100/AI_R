@@ -16,6 +16,7 @@ from ..services.orchestrator import orchestrator_service
 from ..services.circuit_breaker import circuit_breaker
 from ..services.encryption import decrypt_api_key
 from ..services.chat_enhancer import chat_enhancer
+from ..services.brainstorming_service import brainstorming_service
 from ..services.agent_manager import agent_manager
 from ..services.observability import observability_service
 from ..services.guardrails import guardrails_service
@@ -512,6 +513,36 @@ async def chat_completions(req: ChatCompletionRequest, request: Request, db: Ses
     complexity_level = early_classification.complexity_level.value if hasattr(early_classification.complexity_level, 'value') else str(early_classification.complexity_level)
     is_simple = early_classification.is_simple
     fast_path_eligible = early_classification.fast_path_eligible
+
+    # P24 Deep Integration — Brainstorming automático antes de responder/construir
+    brainstorm_result = None
+    brainstorm_before_build = None
+    try:
+        auto_brain = brainstorming_service.should_auto_brainstorm(prompt_text, profile=profile_for_validation if 'profile_for_validation' in locals() else req.profile)
+        if auto_brain["should_brainstorm"] and not is_cline:
+            print(f"[P24 BRAINSTORM] Auto brainstorm triggered {auto_brain['triggers']} confidence {auto_brain['confidence']} is_build {auto_brain['is_build_intent']}")
+            if auto_brain["is_build_intent"]:
+                brainstorm_before_build = brainstorming_service.brainstorm_before_build(prompt_text)
+                brainstorm_result = brainstorm_before_build
+                # Enrich prompt with best approach for more close to final objective
+                best = brainstorm_before_build.get("best_approach", {})
+                if best:
+                    print(f"[P24 BRAINSTORM] Best approach {best.get('name')} template {best.get('template')} {best.get('closest_to_final')}% close")
+            else:
+                brainstorm_before_respond = brainstorming_service.brainstorm_before_respond(prompt_text, [m.dict() for m in req.messages], profile=profile_for_validation if 'profile_for_validation' in locals() else req.profile or "BEST")
+                brainstorm_result = brainstorm_before_respond
+            # Log to observability
+            try:
+                observability_service.log(level="info", message=f"P24 brainstorm auto {auto_brain['triggers']} confidence {auto_brain['confidence']}", trace_id=request_id, metadata={"brainstorm": brainstorm_result.get("brainstorm_id") if brainstorm_result else None, "auto_check": auto_brain, "templates_count": brainstorm_result.get("templates_count", 0) if brainstorm_result else 0})
+            except:
+                pass
+        else:
+            print(f"[P24 BRAINSTORM] No auto brainstorm needed — triggers {auto_brain['triggers'] if 'auto_brain' in locals() else []} is_cline {is_cline if 'is_cline' in locals() else False}")
+    except Exception as e:
+        print(f"[P24 BRAINSTORM] Failed {e}")
+        import traceback; traceback.print_exc()
+        brainstorm_result = None
+        brainstorm_before_build = None
     
     # P5 — Override to LONG_CONTEXT if large
     if is_large and early_classification.task_type != TaskType.LONG_CONTEXT:
@@ -1319,7 +1350,18 @@ async def chat_completions(req: ChatCompletionRequest, request: Request, db: Ses
                         "fallback_reasons": fallback_reasons[:3] if fallback_reasons else [],
                         "tools": bool(req.tools),
                         "has_tool_calls": bool(response_tool_calls)
-                    } if use_cline_coding else None
+                    } if use_cline_coding else None,
+                    "brainstorm": {
+                        "triggered": brainstorm_result is not None,
+                        "brainstorm_id": brainstorm_result.get("brainstorm_id") if brainstorm_result else None,
+                        "is_build_intent": brainstorm_result.get("auto_check", {}).get("is_build_intent") if brainstorm_result and isinstance(brainstorm_result.get("auto_check"), dict) else (brainstorm_before_build is not None),
+                        "best_approach": brainstorm_result.get("best_approach", {}).get("name") if brainstorm_result and "best_approach" in brainstorm_result else brainstorm_result.get("best_interpretation", {}).get("type") if brainstorm_result else None,
+                        "template_suggestion": brainstorm_result.get("best_approach", {}).get("template") if brainstorm_result and "best_approach" in brainstorm_result else None,
+                        "closest_to_final": brainstorm_result.get("best_approach", {}).get("closest_to_final") if brainstorm_result and "best_approach" in brainstorm_result else brainstorm_result.get("best_interpretation", {}).get("closest_to_final") if brainstorm_result else None,
+                        "templates_count": brainstorm_result.get("templates_count", 0) if brainstorm_result else 0,
+                        "approaches_count": len(brainstorm_result.get("approaches", [])) if brainstorm_result and "approaches" in brainstorm_result else len(brainstorm_result.get("interpretations", [])) if brainstorm_result else 0,
+                        "version": "P24 deep integration 20 templates"
+                    } if 'brainstorm_result' in locals() and brainstorm_result else None
                 }
             }
             
@@ -1358,6 +1400,32 @@ async def chat_completions(req: ChatCompletionRequest, request: Request, db: Ses
                     print(f"[P2.3 ASYNC CRITIC] Scheduled async critic for {request_id}, returning response immediately TTFB improved 500ms vs 2-5s")
                 except Exception as e:
                     print(f"[P2.3 ASYNC CRITIC] Schedule failed {e}")
+
+            # P24 — Add brainstorm to top-level response for frontend BrainstormPanel
+            if 'brainstorm_result' in locals() and brainstorm_result:
+                openai_resp["brainstorm"] = brainstorm_result
+                # Also add simplified for frontend
+                if "approaches" in brainstorm_result:
+                    openai_resp["brainstorm_panel"] = {
+                        "brainstorm_id": brainstorm_result.get("brainstorm_id"),
+                        "is_build": True,
+                        "best_approach": brainstorm_result.get("best_approach"),
+                        "approaches": brainstorm_result.get("approaches", [])[:5],
+                        "suggested_templates": brainstorm_result.get("suggested_templates", [])[:3],
+                        "recommendation": brainstorm_result.get("recommendation"),
+                        "templates_count": brainstorm_result.get("templates_count", 20),
+                        "version": "P24 deep integration"
+                    }
+                else:
+                    openai_resp["brainstorm_panel"] = {
+                        "brainstorm_id": brainstorm_result.get("brainstorm_id"),
+                        "is_build": False,
+                        "best_interpretation": brainstorm_result.get("best_interpretation"),
+                        "interpretations": brainstorm_result.get("interpretations", [])[:4],
+                        "recommendation": brainstorm_result.get("recommendation"),
+                        "templates_count": brainstorm_result.get("templates_count", 20),
+                        "version": "P24 deep integration"
+                    }
 
             if req.explain_routing:
                 openai_resp["routing"] = {

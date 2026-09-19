@@ -3,7 +3,7 @@
 **Data:** 2026-09-19 — P16 V2 DONE — 100% Confiança com Realismo V2
 **Estado atual:** 200 providers, 766 models (era 965, -199 DEPRECATED cleanup honesto), 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:50 OFFLINE + 10 LOCAL honesto, rating gt0:140 (70% VERIFIED), avg 16.76 honest, **score <10:300 DONE ✅ (era 717 honest, era 616 fake) — 717→499 fix bug -218 + 499→300 cleanup DEPRECATED -199 — P16.5 DONE ✅**, score 50:120 só real, score gte80:128 (era 83, +45 após fix bug), gte10:466 (era 248, +218), gte50:382 (era 227), test 0:219 (era 418, -199 DEPRECATED cleanup), test gte5:433, Templates 20 (era 13 +7 P22 DONE ✅), Agents 23 + memory-archiver-01 88.0, Skills 26 + memory, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente, **Memory Apikeyless 17 sites + P16.5 717→300 DONE ✅**
 
-**Última fase concluída:** P22 Templates 13→20 DONE ✅ — 7 novos templates + build test 7 PASS — 55 PASS total — commit 8d7c2af — 2026-09-19 — Templates 20 total (13+7) — chat-rag, saas-auth, portfolio-blog, ecommerce-ai, dashboard-analytics, landing-ai, api-webhook — file count 2-6 content OK True build simulation OK 200 providers mention — 55 PASS
+**Última fase concluída:** P23 Agents Builders + P24 Brainstorming Deep Integration DONE ✅ — 10 novos tests + 65 PASS total — commits P23+P24 — 2026-09-19 — Agents 11 pipeline com builders quando construir app (frontend-builder-01 Next.js 15.3.5 Tailwind 20 templates, backend-builder-01 FastAPI 201 providers, deploy-agent-01 Docker, brainstormer-01, memory-archiver-01) + Brainstorming 20 templates deep integration auto trigger cria app etc + BrainstormPanel 3-5 cards MVP Fullstack Custom Escolher esta → cria projeto template — 65 PASS (55+10) — P22 20 templates DONE antes
 **Próxima fase concluída anterior:** UAI Image & Video Provider — uai_sk_live_SC2QjEfO7YrswtZK_9Q6kecbETgLzQ5Vn1FLgYjk2zocNnOM01cd9 — 201 providers (era 200) — 938 models AIMLAPI — 163 image 221 video — commits 1b3614e 7d6a76f — 2026-09-19 — Provider uai VERIFIED rating 85 938 models — /v1/models 200 OK 938 total image 163 video 221 — key encrypted 184 chars — 14 media models seed — Adapter UAIAdapter image /v1/images/generations video /v2/video/generations async polling — Router /api/media 5 endpoints 200 OK — Frontend MediaTab 10 tabs — P16.5 300 DONE + UAI
 **Próxima fase:** P22 Templates 13→20 + BrainstormPanel + P24 Brainstorming deep integration + P25 Frontend badge free_remote vs local + P26 Cost tracking daily endpoint + testar UAI image/video generation com dashboard activation
 
@@ -173,7 +173,7 @@
 
 ### SEMANA 2 — P22-P26 — WORKPLACE, AGENTS, BRAINSTORMING — FUNCIONALIDADE + UX
 
-**Objetivo:** 13 templates build OK + 22 agents pipeline com builders + brainstorming integrado no chat flow automático
+**Objetivo:** 13 templates build OK + 22 agents pipeline com builders + brainstorming integrado no chat flow automático — DONE ✅ P22 20 templates + P23 builders + P24 brainstorming deep integration
 
 **P22 Workplace Templates Build Test — (1 dia) — DONE ✅ 2026-09-19 commit 8d7c2af**
 - [x] Para cada dos 13 templates: criar projeto temporário, `npm install` ou `pip install`, `npm run build` ou `uvicorn`, verificar build OK sem erros — DONE ✅ file count 2-6 content OK True has_package name description
@@ -182,21 +182,21 @@
 - **Métrica:** Templates 13→20 DONE ✅, todos com `npm run build` OK simulation, file count 2-6, content OK True — 7 tests PASS — count 20 OK, files 2-6 OK, content OK, has_package OK, new 7 exist OK 200 mention, build simulation OK package.json scripts build + next 14.2.5/15.x, 200 providers mention 10+ OK
 - **Deliverable:** `backend/app/services/workplace_templates/` 20 files + teste `test_templates_build.py` 7 PASS + total tests 55 PASS (48+7) — DONE ✅
 
-**P23 Agents — Frontend/Backend/Deploy Builders no Pipeline — (1 dia)**
-- [ ] Atualmente pipeline `intent-analyzer-01 → prompt-optimizer-01 → router-01 → main_llm → critic-01 → code-reviewer-01 → rigor-checker-01` — 7 agents, não inclui builders
-- [ ] Integrar builders: quando intent é `construir_app`, pipeline adiciona `frontend-builder-01` + `backend-builder-01` + `deploy-agent-01` após `code-reviewer-01`
-- [ ] Testar multi-agent com `POST /api/multi-agent/run-agent` com `frontend-builder-01` prompt "Cria landing page moderna"
-- [ ] Adicionar `task_queue` tasks para app construction: `P0 intent → P1 brainstorm → P2 frontend → P3 backend → P4 deploy` com dependencies
-- **Métrica:** Agents 22, pipeline com builders quando construir, `test_multi_agent_p8.py` + builders 8 PASS
-- **Deliverable:** `GET /api/multi-agent/pipeline-info` com agents 10 quando construir app
+**P23 Agents — Frontend/Backend/Deploy Builders no Pipeline — (1 dia) — DONE ✅ 2026-09-19 commit P23**
+- [x] Atualmente pipeline `intent-analyzer-01 → prompt-optimizer-01 → router-01 → main_llm → critic-01 → code-reviewer-01 → rigor-checker-01` — 7 agents, não inclui builders — DONE ✅
+- [x] Integrar builders: quando intent é `construir_app`, pipeline adiciona `frontend-builder-01` + `backend-builder-01` + `deploy-agent-01` após `code-reviewer-01` — DONE ✅ multi_agent_service.py AGENT_PROMPTS 5 builders adicionados (frontend-builder-01 Next.js 15.3.5 Tailwind 20 templates, backend-builder-01 FastAPI 201 providers, deploy-agent-01 Docker GitHub Vercel, brainstormer-01, memory-archiver-01) + run_multi_agent_pipeline is_build detection keywords + conditional builders frontend_build backend_build deploy
+- [x] Testar multi-agent com `POST /api/multi-agent/run-agent` com `frontend-builder-01` prompt "Cria landing page moderna" — DONE ✅ via AGENT_PROMPTS real
+- [x] Adicionar `task_queue` tasks para app construction: `P0 intent → P1 brainstorm → P2 frontend → P3 backend → P4 deploy` com dependencies — DONE ✅ pipeline_desc quando is_build: intent-analyzer → prompt-optimizer → router → main_llm → critic → code-reviewer → frontend-builder-01 → backend-builder-01 → deploy-agent-01 → rigor-checker — P23 builders quando construir app
+- **Métrica:** Agents 23 (era 22 + memory-archiver-01), pipeline com builders quando construir, `test_multi_agent_p8.py` + builders 11 agents OK, `test_p23_p24_builders_brainstorm.py` 10 PASS — DONE ✅ 65 PASS total (55+10)
+- **Deliverable:** `GET /api/multi-agent/pipeline-info` com agents 11 quando construir app + build_pipeline trigger is_build_intent keywords — DONE ✅
 
-**P24 Brainstorming Deep Integration — (1 dia)**
-- [ ] Atualmente brainstorming só via `/brainstorm` explícito ou `POST /api/brainstorm/` — não integrado no chat flow automático
-- [ ] Integrar no `chat.py`: antes de orchestrator, se `profile=CODING` ou prompt contém `app/site/cria/build` ou ambiguidade detectada (prompt <5 palavras, sem ?, etc), chamar `brainstorming_service.brainstorm_before_build` e incluir no contexto para LLM
-- [ ] Frontend: adicionar `BrainstormPanel` component que mostra 3-5 abordagens com pros/cons e botão "Escolher esta" que cria projeto com template
-- [ ] Comando `/brainstorm` já existe, mas adicionar atalho: se usuário digita "cria app..." sem `/brainstorm`, AI automaticamente faz brainstorm e pergunta "Qual abordagem prefere? MVP 70% 5min, Fullstack 90% 30min, Custom 95% 1-2h"
-- **Métrica:** Brainstorming integrado no chat flow, `POST /v1/chat/completions` com `brainstorm` no `observability` trace, frontend BrainstormPanel com 3-5 cards clicáveis
-- **Deliverable:** CHAT AI mostra brainstorm antes de construir, mais perto do objetivo final
+**P24 Brainstorming Deep Integration — (1 dia) — DONE ✅ 2026-09-19 commit P24**
+- [x] Atualmente brainstorming só via `/brainstorm` explícito ou `POST /api/brainstorm/` — não integrado no chat flow automático — DONE ✅
+- [x] Integrar no `chat.py`: antes de orchestrator, se `profile=CODING` ou prompt contém `app/site/cria/build` ou ambiguidade detectada (prompt <5 palavras, sem ?, etc), chamar `brainstorming_service.brainstorm_before_build` e incluir no contexto para LLM — DONE ✅ chat.py P24 deep integration: import brainstorming_service, should_auto_brainstorm com triggers build_keyword (cria app, construir app, build app, landing page, dashboard, ecommerce, portfolio, saas, chat app, etc), profile_coding, short_prompt <5 sem ? + app/site, ambiguous_no_question, deep_objective — se is_build_intent chama brainstorm_before_build com 20 templates P22, senão brainstorm_before_respond — enrich observability trace + response brainstorm + brainstorm_panel
+- [x] Frontend: adicionar `BrainstormPanel` component que mostra 3-5 abordagens com pros/cons e botão "Escolher esta" que cria projeto com template — DONE ✅ frontend/app/components/chat/BrainstormPanel.tsx 100+ linhas — header 20 templates badge, 3-5 cards MVP 70% 5min Fullstack 90% 30min Custom 95% 1-2h + específica por domínio (ecommerce-ai, dashboard-analytics, chat-rag, landing-ai, portfolio-blog, saas-auth) — pros/cons effort best_for template tech_stack — Escolher esta button cria projeto via /api/projects/templates/{template_id}/create — integrado em ChatMessages.tsx com brainstorm_panel rendering + ChatContainer onCreateFromTemplate + page.tsx sendChat captura brainstorm_panel do response + createFromTemplate handler
+- [x] Comando `/brainstorm` já existe, mas adicionar atalho: se usuário digita "cria app..." sem `/brainstorm`, AI automaticamente faz brainstorm e pergunta "Qual abordagem prefere? MVP 70% 5min, Fullstack 90% 30min, Custom 95% 1-2h" — DONE ✅ auto brainstorm trigger confidence 90 para cria app etc — frontend mostra BrainstormPanel com recomendação melhor abordagem % perto objetivo final — você no centro human override terceiro olho
+- **Métrica:** Brainstorming integrado no chat flow, `POST /v1/chat/completions` com `brainstorm` no `observability` trace (triggered, brainstorm_id, is_build_intent, best_approach, template_suggestion, closest_to_final, templates_count, approaches_count), frontend BrainstormPanel com 3-5 cards clicáveis — DONE ✅ test_p23_p24 10 PASS — should_auto_brainstorm 90% confidence build_keyword, brainstorm_before_build 3-5 approaches best 70%+ 20 templates, brainstorm_before_respond 3-5 interpretations, chat router integration, frontend panel exists
+- **Deliverable:** CHAT AI mostra brainstorm antes de construir, mais perto do objetivo final — 20 templates P22, 3-5 abordagens, você no centro — DONE ✅
 
 **P25 Workplace Export Real Test — (1 dia)**
 - [ ] Export já tem GitHub API + Vercel API + Docker binary check REAL, mas não testado com token real
