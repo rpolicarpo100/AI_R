@@ -9,6 +9,7 @@ import { AuditTab } from "./AuditTab";
 import { CommandsTab } from "./CommandsTab";
 import { ObservabilityTab } from "./ObservabilityTab";
 import { MemoryTab } from "./MemoryTab";
+import { MediaTab } from "./MediaTab";
 
 const TABS = [
   { id: "dashboard", label: "Dashboard", icon: "📊" },
@@ -16,6 +17,7 @@ const TABS = [
   { id: "benchmarks", label: "Benchmarks", icon: "🏆" },
   { id: "rigor", label: "Rigor", icon: "✅" },
   { id: "memory", label: "Memory", icon: "🧠" },
+  { id: "media", label: "Media", icon: "🎨" },
   { id: "agents", label: "Agents", icon: "🤖" },
   { id: "audit", label: "Audit", icon: "🔍" },
   { id: "commands", label: "Commands", icon: "⌨️" },
@@ -27,8 +29,8 @@ export function SettingsContainer({ stats, providers, models, rigor, agents, ski
   return (
     <div className="rounded-[20px] bg-[#111116] border border-zinc-900 overflow-hidden">
       <div className="px-5 py-3 border-b border-zinc-900 flex items-center justify-between">
-        <div className="flex items-center gap-2"><span className="text-[13px] font-medium">⚙️ Settings P16 V2 + P21 + Memory ENTERPRISE</span><span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500">{providers.length} provs • {models.length} models • {rigor?.models?.measured_percent||0}% rigor • {rigor?.models?.chat?.measured_percent||0}% chat • 17 memory</span></div>
-        <div className="text-[10px] text-zinc-600">200 provs 965 models 0 artificial 101 UNKNOWN 50 OFFLINE 10 LOCAL • 9 tabs • P16 V2 + P21 + Memory Apikeyless Archive • 15 seed + continuous increase</div>
+        <div className="flex items-center gap-2"><span className="text-[13px] font-medium">⚙️ Settings P16.5 + UAI Media ENTERPRISE</span><span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500">{providers.length} provs • {models.length} models • {rigor?.models?.measured_percent||0}% rigor • {rigor?.models?.chat?.measured_percent||0}% chat • 17 memory • UAI 938 models</span></div>
+        <div className="text-[10px] text-zinc-600">201 provs 766 models 0 artificial 101 UNKNOWN 50 OFFLINE 10 LOCAL • 10 tabs • P16.5 300 DONE + UAI Image Video 938 models • 14 media models • Media Tab</div>
       </div>
       <div className="px-3 py-2 border-b border-zinc-900 flex gap-1 overflow-x-auto">
         {TABS.map(t=><button key={t.id} onClick={()=>setActive(t.id)} className={`px-3 py-1.5 rounded-full text-[11px] font-medium whitespace-nowrap border transition ${active===t.id ? "bg-white text-black border-white" : "bg-zinc-900 text-zinc-500 border-zinc-800 hover:text-zinc-300"}`}>{t.icon} {t.label}</button>)}
@@ -39,6 +41,7 @@ export function SettingsContainer({ stats, providers, models, rigor, agents, ski
         {active==="benchmarks" && <BenchmarksTab models={models} />}
         {active==="rigor" && <RigorTab rigor={rigor} />}
         {active==="memory" && <MemoryTab />}
+        {active==="media" && <MediaTab />}
         {active==="agents" && <AgentsTab agents={agents} skills={skills} providers={providers} models={models} />}
         {active==="audit" && <AuditTab stats={stats} />}
         {active==="commands" && <CommandsTab />}
