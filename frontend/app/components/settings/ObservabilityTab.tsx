@@ -7,6 +7,7 @@ export const ObservabilityTab = memo(function ObservabilityTab(){
   const [traces, setTraces] = useState<any[]>([]);
   const [alerts, setAlerts] = useState<any[]>([]);
   const [guardrails, setGuardrails] = useState<any>(null);
+  const [costDaily, setCostDaily] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(()=>{
@@ -20,6 +21,9 @@ export const ObservabilityTab = memo(function ObservabilityTab(){
         setAlerts(a.alerts || []);
         const g = await api.get("/api/observability/guardrails");
         setGuardrails(g);
+        // P26 Cost daily
+        const cd = await api.get("/api/observability/cost?period=daily&limit=30");
+        setCostDaily(cd);
       }catch(e){ console.error(e); }
       setLoading(false);
     };
@@ -28,7 +32,7 @@ export const ObservabilityTab = memo(function ObservabilityTab(){
     return ()=>clearInterval(interval);
   },[]);
 
-  if(loading) return <div className="text-[11px] text-zinc-500">Loading Observability P16...</div>;
+  if(loading) return <div className="text-[11px] text-zinc-500">Loading Observability P26...</div>;
 
   const obs = stats?.observability;
   const guard = stats?.guardrails || guardrails;
@@ -40,12 +44,60 @@ export const ObservabilityTab = memo(function ObservabilityTab(){
   return (
     <div className="space-y-3">
       <div className="flex gap-2 text-[11px] flex-wrap">
-        <span className="px-2 py-1 rounded-full bg-white text-black font-medium">Observability P23 P3 ENTERPRISE</span>
+        <span className="px-2 py-1 rounded-full bg-white text-black font-medium">Observability P26 COST DAILY ENTERPRISE</span>
         <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">{obs?.traces?.total||0} traces</span>
         <span className="px-2 py-1 rounded-full bg-violet-500/10 text-violet-400 border border-violet-500/20">{guard?.count||21} guardrails 18+ ✅</span>
-        <span className="px-2 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500">persistence {obs?.persistence||"memory"} • OTel • P3</span>
-        <span className="px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{obs?.alerts?.total||0} alerts • {p05.deprecated_count||0} deprecated • {p05.retry_after_active||0} retry-after</span>
-        <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">cache {providerCache.providers_count||0} prov {providerCache.models_count||0} models hit:{providerCache.hit?"✅":"❌"} • pool {httpPool.pooled_clients||0} clients</span>
+        <span className="px-2 py-1 rounded-full bg-zinc-900 border border-zinc-800 text-zinc-500">persistence {obs?.persistence||"memory"} • OTel • P26</span>
+        <span className="px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">{obs?.alerts?.total||0} alerts • {p05.deprecated_count||0} deprecated • {costDaily?.budget_status?.alert_count||0} budget alerts</span>
+        <span className="px-2 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">cost ${costDaily?.total_cost||obs?.costs?.total||0} • {costDaily?.total_count||0} req • daily {costDaily?.daily?.length||0} days</span>
+      </div>
+
+      {/* P26 Cost Daily Panel */}
+      <div className="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/20">
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] font-medium text-emerald-300">💰 P26 Cost Tracking Daily — provider/model/user/day + budget alerts</div>
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-400 border border-zinc-700">budget ${costDaily?.budget_status?.daily_budget||1}/day ${costDaily?.budget_status?.monthly_budget||30}/mo</span>
+        </div>
+        <div className="mt-2 grid md:grid-cols-4 gap-2 text-[10px] font-mono">
+          <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+            <div className="text-zinc-500">Total cost</div>
+            <div className="text-[13px] font-bold text-white">${costDaily?.total_cost||0}</div>
+            <div className="text-zinc-600">{costDaily?.total_count||0} requests • avg ${costDaily?.daily?.[0]?.avg_cost||0}</div>
+          </div>
+          <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+            <div className="text-zinc-500">Current daily / monthly</div>
+            <div className="text-[13px] font-bold text-white">${costDaily?.budget_status?.current_daily||0} / ${costDaily?.budget_status?.current_monthly||0}</div>
+            <div className={`text-[10px] ${costDaily?.budget_status?.status==="ok"?"text-emerald-400":"text-amber-400"}`}>status {costDaily?.budget_status?.status||"ok"} • {costDaily?.budget_alerts?.length||0} alerts</div>
+          </div>
+          <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+            <div className="text-zinc-500">Top provider / model today</div>
+            <div className="text-white truncate">{costDaily?.daily?.[0]?.top_provider||"none"} • {costDaily?.daily?.[0]?.top_model||"none"}</div>
+            <div className="text-zinc-600">by provider {Object.keys(costDaily?.by_provider||{}).length} • by model {Object.keys(costDaily?.by_model||{}).length}</div>
+          </div>
+          <div className="p-2 rounded-lg bg-zinc-900 border border-zinc-800">
+            <div className="text-zinc-500">Tokens today</div>
+            <div className="text-white">{costDaily?.daily?.[0]?.total_tokens||0} tokens</div>
+            <div className="text-zinc-600">in {costDaily?.daily?.[0]?.input_tokens||0} out {costDaily?.daily?.[0]?.output_tokens||0}</div>
+          </div>
+        </div>
+        <div className="mt-2 max-h-[120px] overflow-auto space-y-1">
+          {(costDaily?.daily||[]).slice(0,5).map((d:any)=>(
+            <div key={d.date} className="flex items-center gap-2 text-[10px] font-mono p-1.5 rounded-lg bg-zinc-900/50 border border-zinc-800/50">
+              <span className="text-zinc-400">{d.date}</span>
+              <span className="text-white">${d.total_cost}</span>
+              <span className="text-zinc-500">{d.count} req • {d.total_tokens} tokens</span>
+              <span className="text-zinc-600 truncate">top {d.top_provider||"none"} {d.top_model||""}</span>
+              <span className={`ml-auto px-1.5 py-0.5 rounded-full border ${d.total_cost>1?"bg-amber-500/10 text-amber-400 border-amber-500/20":"bg-emerald-500/10 text-emerald-400 border-emerald-500/20"}`}>${d.avg_cost} avg</span>
+            </div>
+          ))}
+          {(!costDaily?.daily || costDaily.daily.length===0) && <div className="text-[10px] text-zinc-600">No cost yet — faça chat para gerar cost logs — RequestLog timestamp provider model cost input_tokens output_tokens</div>}
+        </div>
+        {costDaily?.budget_alerts?.length>0 && (
+          <div className="mt-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20 text-[10px]">
+            <div className="font-medium text-amber-300">⚠️ Budget Alerts {costDaily.budget_alerts.length}</div>
+            {costDaily.budget_alerts.slice(0,3).map((al:any,i:number)=><div key={i} className="text-amber-400/80">{al.date} ${al.cost} {al.message}</div>)}
+          </div>
+        )}
       </div>
 
       <div className="grid md:grid-cols-3 gap-2">
@@ -131,19 +183,14 @@ export const ObservabilityTab = memo(function ObservabilityTab(){
                 <div className="text-zinc-500">{a.timestamp} • threshold:{a.threshold} value:{a.value}</div>
               </div>
             ))}
-            {alerts.length===0 && <div className="text-[10px] text-zinc-600">No alerts — rigor 30.3% LOW triggers alert &lt;50% • latency 457ms OK • error rate 0% OK</div>}
+            {alerts.length===0 && <div className="text-[10px] text-zinc-600">No alerts — rigor 30.3% LOW triggers alert &lt;50% • latency 457ms OK • error rate 0% OK • cost ${costDaily?.total_cost||0} budget ${costDaily?.budget_status?.daily_budget||1} OK</div>}
           </div>
         </div>
       </div>
 
       <div className="p-2.5 rounded-xl bg-violet-500/5 border border-violet-500/20 text-[11px]">
-        <div className="font-medium text-violet-300">🔭 Observability P16 Enterprise — Helicone + Portkey + Future AGI pattern — 12 panels Grafana</div>
-        <div className="mt-1 text-zinc-500">P16: Tracing trace_id span_id parent_span_id latency breakdown classifier 10ms routing 20ms adapter 2000ms critic 500ms total • Sessions session_id multi-turn cost per session latency per session • Prompt experiments A/B • OTel traces metrics logs Prometheus+Grafana 12 panels providers models rigor latency cost requests agents loop tasks audit errors cache hit rate streaming • Cost tracking per provider/model/user/session/day budget alerts • Caching Redis 30s encrypted semantic • Logs JSON level timestamp trace_id user_id provider model latency cost status • Alerts rigor &lt;50% latency &gt;5s error &gt;10% cost &gt;budget provider offline • Grafana v8 12 panels + Loki logs + Alerts Slack/email</div>
-      </div>
-
-      <div className="p-2.5 rounded-xl bg-zinc-900 border border-zinc-800 text-[11px]">
-        <div className="font-medium">🛡️ Guardrails 18+ — {guard?.count||21} total — PII email phone NIF credit card api_key • prompt injection • toxicity hate self_harm sexual • sql xss command injection • cost latency token file_size files_count • provider_health model_capability human_override</div>
-        <div className="mt-1 text-zinc-500">Middleware chain config enabled threshold action block/warn/log/human approval • Audit log guardrail trigger • Metrics guardrail hits • Grafana panels • 0 false positives &lt;5% false negatives • P16 Enterprise Future AGI pattern</div>
+        <div className="font-medium text-violet-300">🔭 Observability P26 Enterprise — Cost Daily + Budget Alerts — 12 panels Grafana</div>
+        <div className="mt-1 text-zinc-500">P26: Cost tracking daily — GET /api/observability/cost?period=daily — soma RequestLog por provider/model/user/day, budget alerts $1/day $30/mo, top provider/model per day, tokens daily, avg cost — by_provider by_model by_day_provider by_day_model — budget_status daily_budget monthly_budget current_daily current_monthly alert_count status ok/warning — Grafana 12 panels cost trace sessions + P25 badge remote free vs local</div>
       </div>
     </div>
   );

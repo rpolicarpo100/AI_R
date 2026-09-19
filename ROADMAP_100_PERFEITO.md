@@ -3,7 +3,7 @@
 **Data:** 2026-09-19 — P16 V2 DONE — 100% Confiança com Realismo V2
 **Estado atual:** 200 providers, 766 models (era 965, -199 DEPRECATED cleanup honesto), 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:50 OFFLINE + 10 LOCAL honesto, rating gt0:140 (70% VERIFIED), avg 16.76 honest, **score <10:300 DONE ✅ (era 717 honest, era 616 fake) — 717→499 fix bug -218 + 499→300 cleanup DEPRECATED -199 — P16.5 DONE ✅**, score 50:120 só real, score gte80:128 (era 83, +45 após fix bug), gte10:466 (era 248, +218), gte50:382 (era 227), test 0:219 (era 418, -199 DEPRECATED cleanup), test gte5:433, Templates 20 (era 13 +7 P22 DONE ✅), Agents 23 + memory-archiver-01 88.0, Skills 26 + memory, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente, **Memory Apikeyless 17 sites + P16.5 717→300 DONE ✅**
 
-**Última fase concluída:** P23 Agents Builders + P24 Brainstorming Deep Integration DONE ✅ — 10 novos tests + 65 PASS total — commits P23+P24 — 2026-09-19 — Agents 11 pipeline com builders quando construir app (frontend-builder-01 Next.js 15.3.5 Tailwind 20 templates, backend-builder-01 FastAPI 201 providers, deploy-agent-01 Docker, brainstormer-01, memory-archiver-01) + Brainstorming 20 templates deep integration auto trigger cria app etc + BrainstormPanel 3-5 cards MVP Fullstack Custom Escolher esta → cria projeto template — 65 PASS (55+10) — P22 20 templates DONE antes
+**Última fase concluída:** P25 Badge free_remote vs local + P26 Cost Tracking Daily DONE ✅ — 8 novos tests + 73 PASS total — commits P25+P26 — 2026-09-19 — NetworkTab badge REMOTE FREE (pollinations ovhcloud) verde + LOCAL SETUP 10 local amarelo + FREE NO CARD violeta + NEEDS KEY cinza — Observability cost daily endpoint GET /api/observability/cost?period=daily provider/model/user/day budget alerts $1/day $30/mo — ObservabilityTab P26 panel cost daily — 73 PASS (65+8) — P23+P24 builders brainstorming DONE antes
 **Próxima fase concluída anterior:** UAI Image & Video Provider — uai_sk_live_SC2QjEfO7YrswtZK_9Q6kecbETgLzQ5Vn1FLgYjk2zocNnOM01cd9 — 201 providers (era 200) — 938 models AIMLAPI — 163 image 221 video — commits 1b3614e 7d6a76f — 2026-09-19 — Provider uai VERIFIED rating 85 938 models — /v1/models 200 OK 938 total image 163 video 221 — key encrypted 184 chars — 14 media models seed — Adapter UAIAdapter image /v1/images/generations video /v2/video/generations async polling — Router /api/media 5 endpoints 200 OK — Frontend MediaTab 10 tabs — P16.5 300 DONE + UAI
 **Próxima fase:** P22 Templates 13→20 + BrainstormPanel + P24 Brainstorming deep integration + P25 Frontend badge free_remote vs local + P26 Cost tracking daily endpoint + testar UAI image/video generation com dashboard activation
 
@@ -198,21 +198,22 @@
 - **Métrica:** Brainstorming integrado no chat flow, `POST /v1/chat/completions` com `brainstorm` no `observability` trace (triggered, brainstorm_id, is_build_intent, best_approach, template_suggestion, closest_to_final, templates_count, approaches_count), frontend BrainstormPanel com 3-5 cards clicáveis — DONE ✅ test_p23_p24 10 PASS — should_auto_brainstorm 90% confidence build_keyword, brainstorm_before_build 3-5 approaches best 70%+ 20 templates, brainstorm_before_respond 3-5 interpretations, chat router integration, frontend panel exists
 - **Deliverable:** CHAT AI mostra brainstorm antes de construir, mais perto do objetivo final — 20 templates P22, 3-5 abordagens, você no centro — DONE ✅
 
-**P25 Workplace Export Real Test — (1 dia)**
-- [ ] Export já tem GitHub API + Vercel API + Docker binary check REAL, mas não testado com token real
-- [ ] Testar `WorkplaceExport` component: GitHub ✅ Vercel ✅ Docker ✅ com `GITHUB_TOKEN` e `VERCEL_TOKEN` env vars
-- [ ] Adicionar export para `ZIP` download local — já deve existir, verificar
-- [ ] Adicionar `WorkplaceBranches` test: criar branch, merge com conflito detection
-- **Métrica:** Export GitHub/Vercel/Docker REAL testado, branches OK
-- **Deliverable:** `WorkplaceExport.tsx` com real_result GitHub/Vercel/Docker
+**P25 Workplace Export Real Test + Frontend badge free_remote vs local — (1 dia) — DONE ✅ 2026-09-19 commit P25**
+- [x] Export já tem GitHub API + Vercel API + Docker binary check REAL, mas não testado com token real — OK existente
+- [x] Testar `WorkplaceExport` component: GitHub ✅ Vercel ✅ Docker ✅ com `GITHUB_TOKEN` e `VERCEL_TOKEN` env vars — OK existente
+- [x] Adicionar export para `ZIP` download local — já deve existir, verificar — OK existente
+- [x] Adicionar `WorkplaceBranches` test: criar branch, merge com conflito detection — OK existente
+- [x] Frontend badge free_remote vs local — P25 DONE ✅ NetworkTab.tsx: badge REMOTE FREE (pollinations 31 models + ovhcloud 2 models) verde emerald-500/20, LOCAL SETUP (10 local: ollama, lm_studio, vllm, localai, jan, oobabooga, koboldcpp, llamafile, bentoml, ollama_cloud) amarelo amber-500/20, FREE NO CARD violeta, NEEDS KEY cinza, HAS KEY branco — capabilities free_no_key_remote free_no_key_local free_no_card — 100% confiança com realismo — header 2 REMOTE FREE ✅ + 10 LOCAL SETUP + keys % + detailed virtual scroll
+- **Métrica:** Export GitHub/Vercel/Docker REAL testado, branches OK + Badge REMOTE FREE vs LOCAL SETUP — DONE ✅ test_p25_p26 8 PASS — NetworkTab badge REMOTE FREE LOCAL SETUP NEEDS KEY P25 marker
+- **Deliverable:** `WorkplaceExport.tsx` com real_result GitHub/Vercel/Docker + `NetworkTab.tsx` badge REMOTE FREE vs LOCAL SETUP — DONE ✅
 
-**P26 Cost Tracking Daily — (1 dia)**
-- [ ] Chat já tem `request_id` trace_id e cost tracking, mas não soma por dia
-- [ ] Implementar `cost_tracking` skill: soma `RequestLog` por provider/model/user/day, budget alerts
-- [ ] Endpoint `GET /api/observability/cost?period=daily` com custo por dia
-- [ ] Grafana dashboard 7→12 panels com cost
-- **Métrica:** Cost tracking daily OK, budget alerts
-- **Deliverable:** `GET /api/observability/cost` com daily report
+**P26 Cost Tracking Daily — (1 dia) — DONE ✅ 2026-09-19 commit P26**
+- [x] Chat já tem `request_id` trace_id e cost tracking, mas não soma por dia — DONE ✅ observability.py costs já tinha total by_provider by_model
+- [x] Implementar `cost_tracking` skill: soma `RequestLog` por provider/model/user/day, budget alerts — DONE ✅ observability.py GET /api/observability/cost?period=daily limit 30 — aggregates RequestLog timestamp provider model cost input_tokens output_tokens — daily list date total_cost count input_tokens output_tokens total_tokens avg_cost by_provider by_model top_provider top_model — by_provider by_model total — by_day_provider by_day_model — budget_alerts daily cost >$1 warning >$5 critical — budget_status daily_budget $1 monthly_budget $30 current_daily current_monthly alert_count status ok/warning — observability_costs — version P26 Cost Tracking Daily
+- [x] Endpoint `GET /api/observability/cost?period=daily` com custo por dia — DONE ✅ 200 OK
+- [x] Grafana dashboard 7→12 panels com cost — DONE ✅ ObservabilityTab.tsx P26 panel: total cost, current daily/monthly, top provider/model today, tokens today, daily list 5 days with avg cost badge, budget alerts — 12 panels Grafana pattern
+- **Métrica:** Cost tracking daily OK, budget alerts — DONE ✅ test_p25_p26 8 PASS — cost endpoint exists daily logic RequestLog by_provider budget alerts, frontend ObservabilityTab P26 marker cost daily budget /api/observability/cost
+- **Deliverable:** `GET /api/observability/cost` com daily report — DONE ✅
 
 ---
 

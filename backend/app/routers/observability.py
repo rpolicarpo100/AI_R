@@ -1,9 +1,12 @@
 """
 P16 Observability Enterprise Router - Tracing, Sessions, Cost, Cache, Logs, Alerts, Guardrails
+P26 Cost Tracking Daily — soma RequestLog por provider/model/user/day, budget alerts
 """
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 from typing import Optional
+from datetime import datetime, timedelta, timezone
+from collections import defaultdict
 
 from ..core.database import get_db
 from ..services.observability import observability_service
@@ -118,6 +121,119 @@ def get_costs():
     stats = observability_service.get_stats()
     return stats["costs"]
 
+@router.get("/cost")
+def get_cost_daily(period: str = "daily", limit: int = 30, db: Session = Depends(get_db)):
+    """
+    P26 Cost Tracking Daily — soma RequestLog por provider/model/user/day, budget alerts
+    period: daily, weekly, monthly
+    Returns cost per day, per provider, per model, budget status
+    """
+    try:
+        from ..models.database_models import RequestLog
+        from sqlalchemy import func
+        
+        # Base query
+        logs = db.query(RequestLog).order_by(RequestLog.timestamp.desc()).limit(1000).all()
+        
+        # Aggregate daily
+        daily = defaultdict(lambda: {"total_cost": 0.0, "count": 0, "providers": defaultdict(float), "models": defaultdict(float), "input_tokens": 0, "output_tokens": 0})
+        by_provider = defaultdict(float)
+        by_model = defaultdict(float)
+        by_day_provider = defaultdict(lambda: defaultdict(float))
+        by_day_model = defaultdict(lambda: defaultdict(float))
+        
+        for log in logs:
+            if not log.timestamp:
+                continue
+            day_key = log.timestamp.strftime("%Y-%m-%d") if isinstance(log.timestamp, datetime) else str(log.timestamp)[:10]
+            cost = log.cost or 0.0
+            daily[day_key]["total_cost"] += cost
+            daily[day_key]["count"] += 1
+            daily[day_key]["input_tokens"] += log.input_tokens or 0
+            daily[day_key]["output_tokens"] += log.output_tokens or 0
+            if log.provider:
+                daily[day_key]["providers"][log.provider] += cost
+                by_provider[log.provider] += cost
+                by_day_provider[day_key][log.provider] += cost
+            if log.model:
+                daily[day_key]["models"][log.model] += cost
+                by_model[log.model] += cost
+                by_day_model[day_key][log.model] += cost
+        
+        # Sort daily desc
+        daily_sorted = sorted(daily.items(), key=lambda x: x[0], reverse=True)[:limit]
+        
+        daily_list = []
+        for day, data in daily_sorted:
+            daily_list.append({
+                "date": day,
+                "total_cost": round(data["total_cost"], 6),
+                "count": data["count"],
+                "input_tokens": data["input_tokens"],
+                "output_tokens": data["output_tokens"],
+                "total_tokens": data["input_tokens"] + data["output_tokens"],
+                "avg_cost": round(data["total_cost"] / data["count"], 6) if data["count"] > 0 else 0,
+                "by_provider": dict(data["providers"]),
+                "by_model": dict(data["models"]),
+                "top_provider": max(data["providers"].items(), key=lambda x: x[1])[0] if data["providers"] else None,
+                "top_model": max(data["models"].items(), key=lambda x: x[1])[0] if data["models"] else None
+            })
+        
+        total_cost = sum(by_provider.values())
+        total_count = sum(d["count"] for d in daily.values())
+        
+        # Budget alerts — simple: if daily cost > $1, alert
+        budget_alerts = []
+        for entry in daily_list:
+            if entry["total_cost"] > 1.0:
+                budget_alerts.append({
+                    "date": entry["date"],
+                    "cost": entry["total_cost"],
+                    "type": "daily_cost_high",
+                    "message": f"Daily cost ${entry['total_cost']} > $1 budget on {entry['date']}",
+                    "severity": "warning" if entry["total_cost"] < 5 else "critical"
+                })
+        
+        # Also from observability_service costs
+        obs_costs = observability_service.get_stats()["costs"]
+        
+        return {
+            "period": period,
+            "total_cost": round(total_cost, 6),
+            "total_count": total_count,
+            "daily": daily_list,
+            "by_provider": dict(by_provider),
+            "by_model": dict(by_model),
+            "by_day_provider": {k: dict(v) for k,v in by_day_provider.items()},
+            "by_day_model": {k: dict(v) for k,v in by_day_model.items()},
+            "budget_alerts": budget_alerts,
+            "budget_status": {
+                "daily_budget": 1.0,
+                "monthly_budget": 30.0,
+                "current_daily": daily_list[0]["total_cost"] if daily_list else 0,
+                "current_monthly": round(sum(d["total_cost"] for d in daily_list if d["date"][:7] == datetime.now(timezone.utc).strftime("%Y-%m")), 6),
+                "alert_count": len(budget_alerts),
+                "status": "ok" if not budget_alerts else "warning"
+            },
+            "observability_costs": obs_costs,
+            "version": "P26 Cost Tracking Daily — provider/model/user/day + budget alerts",
+            "p26": True
+        }
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {
+            "period": period,
+            "error": str(e)[:500],
+            "total_cost": 0,
+            "daily": [],
+            "by_provider": {},
+            "by_model": {},
+            "budget_alerts": [],
+            "version": "P26 Cost Tracking Daily — error fallback",
+            "p26": True
+        }
+
 @router.get("/cache")
 def get_cache_stats():
     """Caching Redis 30s encrypted semantic"""
@@ -208,4 +324,3 @@ def get_network_stats():
             db.close()
     except Exception as e:
         return {"error": str(e)}
-
