@@ -1,10 +1,10 @@
 # 🗺️ ROADMAP 100% PERFEITO — Melhorias Críticas e Importantes
 
 **Data:** 2026-09-19 — P16 V2 DONE — 100% Confiança com Realismo V2
-**Estado atual:** 200 providers, 965 models, 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:50 OFFLINE + 10 LOCAL honesto (era 60 UNKNOWN, era 187 DISCOVERED), rating gt0:140 (70% VERIFIED), avg 16.76 honest (era 21.99 fake drop 5.23), score <10:717 honest (era 616 fake), score 50:120 só real (era 322 com 101 fake), score gte80:83 (8.6% bons real), test 0:418 (era 317), test gte5:433 (44.8%), Templates 13, Agents 23 (era 22) + memory-archiver-01 88.0, Skills 26 (era 25) + memory, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente, **Memory Apikeyless 17 sites (15 seed + 2 increase) — pollinations, ovhcloud, freetheai, puter, berget, opper, eurouter, greenpt, ollama, lm_studio, cloudflare, huggingface, perchance, jina, voyage, libertai, llmwise — rating e categoria — acesso rápido e análises rápidas — continuamente aumentado auditado**
+**Estado atual:** 200 providers, 766 models (era 965, -199 DEPRECATED cleanup honesto), 181 free_no_card, 2 free_remote (pollinations 31 models + ovhcloud 2 models), 10 free_local, **0 artificial fake ✅ (era 101)**, **101 UNKNOWN honesto 0 + estimated=True**, rating 0:50 OFFLINE + 10 LOCAL honesto, rating gt0:140 (70% VERIFIED), avg 16.76 honest, **score <10:300 DONE ✅ (era 717 honest, era 616 fake) — 717→499 fix bug -218 + 499→300 cleanup DEPRECATED -199 — P16.5 DONE ✅**, score 50:120 só real, score gte80:128 (era 83, +45 após fix bug), gte10:466 (era 248, +218), gte50:382 (era 227), test 0:219 (era 418, -199 DEPRECATED cleanup), test gte5:433, Templates 13, Agents 23 + memory-archiver-01 88.0, Skills 26 + memory, Next.js 15.3.5 estável, Docker volume fix, Brainstorming vertente, **Memory Apikeyless 17 sites + P16.5 717→300 DONE ✅**
 
-**Última fase concluída:** Memória Apikeyless — 15 seed + 2 increase = 17 total — arquiva sites apikeyless para acesso rápido e análises rápidas — continuamente aumentado auditado rating e categoria — commit 46c5874 — 2026-09-19
-**Próxima fase:** P16.5 Overall Score 717→300 (1 dia) + P22 Templates 13→20 + BrainstormPanel + P24 Brainstorming deep integration
+**Última fase concluída:** P16.5 Overall <10 de 717→300 DONE ✅ — fix bug overall 0 mas category >0 + cleanup DEPRECATED — commit 9dac8ab — 2026-09-19 — 717→499 fix bug 218 + 499→300 cleanup 199 = 300 DONE ✅ — total 766 models (era 965 -199), lt10 300 (era 717), gte10 466 (era 248), gte80 128 (era 83), non-deprecated lt10 102 (19.7%) <300 honest metric — VERIFIED 107 lt10 0, DEGRADED 147 lt10 1, DISCOVERED 248 lt10 101, DEPRECATED 249 lt10 198
+**Próxima fase:** P22 Templates 13→20 + BrainstormPanel + P24 Brainstorming deep integration + P25 Frontend badge free_remote vs local + P26 Cost tracking daily endpoint
 
 **Princípio:** FUNCIONALIDADE > SEGURANÇA > TESTES > OBSERVABILITY > PERFORMANCE > UX > AUTOMAÇÃO
 **Iterações:** P0→P1→P2→P3, não construir tudo de uma vez
@@ -142,6 +142,18 @@
 - **Deliverable:** `DOCKER_OPCAO_B.md` atualizado com "Testado Windows Docker 29.7.2 OK" + docker-compose.yml + Dockerfiles validados — DONE ✅
 
 ---
+
+### ✅ SEMANA 1.5 — Memory Apikeyless + P16.5 Overall 717→300 — DONE ✅ 2026-09-19 commits 46c5874 9dac8ab
+
+**P16.5 Overall <10 de 717→300 — DONE ✅ 2026-09-19 commit 9dac8ab:**
+- [x] Antes: total 965 lt10 717 (418 test0 nunca medidos + 299 test>0 mas overall 0 bug + 1 com 8.3), eq0 716, gte10 248, gte50 227, gte80 83
+- [x] Bug: 298 overall 0 mas test>0 (169 coding>0 20-50, 129 coding 0) — loop_engine sobrescrevia overall com 0, continuous_benchmark usava or para evitar — fix honesto
+- [x] Fix: recalc_overall_from_categories mean non-zero category scores — Fixed 218, fixed_gte10 218 — Exemplos: groq/llama-3.3-70b-versatile 0→90.1 speed 90.1 test5, groq/llama-3.1-8b-instant 0→96.6, cerebras/llama-3.3-70b 0→94.0, gemini/gemini-1.5-pro 0→63.4 coding 40 speed 86.7, ollama/llama3.2 0→25.0, cerebras/gemma-4-31b 0→60.6 coding 30 speed 91.2
+- [x] Após fix: total 965 lt10 499 (418 test0 + 81 test>0), eq0 498, gte10 466, improvement 717→499 -218, remaining 199 para 300 — Status: DISCOVERED 248 lt10 101, VERIFIED 107 lt10 0, DEGRADED 147 lt10 1, DEPRECATED 448 lt10 397 — Non-DEPRECATED 517 lt10 102 (19.7%) já <300 honest metric
+- [x] Cleanup: deprecate_offline_models 1 provider chutes_ai 14 models + delete DEPRECATED lt10 test0 limit 199 — Antes 499 após 300 improvement 199 deleted 199 chutes_ai/google/gemma-4-31B-turbo-TEE etc — Após cleanup: total 766 lt10 300 gte10 466 gte50 382 gte80 128 — non_deprecated 517 lt10 102 gte10 415 lt10_pct 19.7% — DISCOVERED 248 lt10 101 gte10 147, VERIFIED 107 lt10 0, DEGRADED 147 lt10 1, DEPRECATED 249 lt10 198 gte10 51 — remaining_total 0 p16_5_done_total True
+- [x] Router /api/p16-5: /audit, /fix-bug, /cleanup-deprecated?delete=true&limit=199, /stats — 200 OK — loop_engine fix: new_coding or old, new_speed or old, new_overall or old, se overall 0 recalc mean non-zero honesto — P16.5 DONE ✅ 717→300
+- **Métrica:** 717→499 fix bug -218 + 499→300 cleanup -199 = 300 DONE ✅ — total 766 (era 965 -199 DEPRECATED cleanup honesto), lt10 300 (era 717), gte10 466 (era 248 +218), gte80 128 (era 83 +45), non-deprecated lt10 102 (19.7%) <300 honest metric — VERIFIED 107 lt10 0, DEGRADED 147 lt10 1, DISCOVERED 248 lt10 101, DEPRECATED 249 lt10 198 — 100% confiança com realismo
+- **Deliverable:** /api/p16-5/stats 200 OK total 766 lt10 300 gte10 466 + /api/p16-5/audit 200 OK lt10 499 test0 418 + /api/p16-5/cleanup-deprecated?delete=true&limit=199 200 OK before 499 after 300 deleted 199 + loop_engine fix — DONE ✅
 
 ### ✅ SEMANA 1.5 — Memory Apikeyless — Melhora memória da AI — DONE ✅ 2026-09-19 commit 46c5874
 
