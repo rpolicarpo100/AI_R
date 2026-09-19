@@ -12,6 +12,7 @@ from ..services.encryption import encrypt_api_key, mask_api_key, decrypt_api_key
 from ..adapters.openai_compat import OpenAICompatibleAdapter, GroqAdapter, CerebrasAdapter, OpenRouterAdapter, MistralAdapter
 from ..adapters.gemini import GeminiAdapter
 from ..adapters.ollama import OllamaAdapter
+from ..adapters.uai import UAIAdapter
 # P15 — Dedicated adapters for 90 providers
 try:
     from ..adapters.dedicated_p15 import DEDICATED_ADAPTERS_P15
@@ -82,6 +83,7 @@ ADAPTERS_MAP = {
     "github_models": OpenAICompatibleAdapter(),
     "huggingface": OpenAICompatibleAdapter(),
     "kie_ai": OpenAICompatibleAdapter(),  # P10 - KIE AI 206 models 80 credits gpt-5-2 measured
+    "uai": UAIAdapter(),  # UAI — Image & Video — uai_sk_live_ — 938 models — 163 image 221 video — /v1/models 200 OK
     **DEDICATED_ADAPTERS_P15,  # P15 — 20+ dedicated adapters for 90 providers
     **DEDICATED_ADAPTERS_P15_200,  # P15 200 — 20 dedicated adapters for 100 new providers
 }

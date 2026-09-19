@@ -372,6 +372,8 @@ from .routers import memory as memory_router
 app.include_router(memory_router.router, prefix=settings.API_PREFIX)  # /api/memory - Apikeyless Memory — arquiva sites apikeyless para acesso rápido e análises rápidas — continuamente aumentado, auditado, rating e categoria
 from .routers import p16_5 as p16_5_router
 app.include_router(p16_5_router.router, prefix=settings.API_PREFIX)  # /api/p16-5 - P16.5 Overall <10 de 717→300 — fix bug + cleanup + benchmark
+from .routers import image_video as image_video_router
+app.include_router(image_video_router.router, prefix=settings.API_PREFIX)  # /api/media - Image & Video Generation — UAI 938 models — uai_sk_live_ — image 163 video 221
 
 @app.get("/")
 @limiter.limit("100/minute")
